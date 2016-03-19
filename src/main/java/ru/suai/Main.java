@@ -23,7 +23,7 @@ public class Main {
             w = 20; // the window of moving averaging
 
         double[] testArray = new double[testArrayLength];
-        double p = 0.2; // proportion ov maximum values for averaging
+        double p = 0.2; // proportion of maximum values for averaging
 
         for(int i = 0; i < testArray.length; ++i) {
             testArray[i] = minRandomValue + (maxRandomValue - minRandomValue) * r.nextDouble();
