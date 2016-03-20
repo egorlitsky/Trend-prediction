@@ -35,7 +35,8 @@ public class Main {
                 b = 6,  // coefficient b in function (k * x + b)
                 w = 5; // the window of moving averaging
 
-        double p = 0.2; // proportion ov maximum values for averaging
+        double[] testArray = new double[testArrayLength];
+        double p = 0.2; // proportion of maximum values for averaging
 
         ArrayList<Double> y = new ArrayList<Double>();  // collection for generated data
         ArrayList<Double> yPredicted = new ArrayList<Double>(); // collection for predicted data
