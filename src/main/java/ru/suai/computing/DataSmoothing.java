@@ -1,5 +1,6 @@
 package main.java.ru.suai.computing;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -7,16 +8,14 @@ import java.util.Arrays;
  *
  */
 public class DataSmoothing {
-    /**
-     * Exceptions messages
-     */
+    // exceptions messages
     public static final String ERR_Y_ARRAY_IS_NOT_DEFINED = "ERR: Y array is not defined!";
-    public static final String ERR_BEGIN_OR_END_INDEX_OF_SORTING_IS_INCORRECT = "ERR: Begin or end index of sorting is incorrect!!";
+    public static final String ERR_BEGIN_OR_END_INDEX_OF_SORTING_IS_INCORRECT = "ERR: Begin or end index of sorting is incorrect!";
 
     /**
      * Input data array.
      */
-    private double[] y;
+    private ArrayList<Double> y;
 
     /**
      * The window of moving averaging.
@@ -35,7 +34,7 @@ public class DataSmoothing {
      * @param w The window of moving averaging
      * @param p Proportion ov maximum values for averaging
      */
-    public DataSmoothing(double[] y, int w, double p) {
+    public DataSmoothing(ArrayList<Double> y, int w, double p) {
         this.y = y;
         this.w = w;
         this.p = p;
@@ -86,11 +85,11 @@ public class DataSmoothing {
         if(this.y == null)
             throw new Exception(ERR_Y_ARRAY_IS_NOT_DEFINED);
 
-        if(beginSortingIndex < 0 || endSortingIndex >= this.y.length || beginSortingIndex >= endSortingIndex) {
+        if(beginSortingIndex < 0 || endSortingIndex >= this.y.size() || beginSortingIndex >= endSortingIndex) {
             throw new Exception(ERR_BEGIN_OR_END_INDEX_OF_SORTING_IS_INCORRECT);
         }
 
-        Arrays.sort(this.y, beginSortingIndex, endSortingIndex);
+        Arrays.sort(this.y.toArray(), beginSortingIndex, endSortingIndex);
     }
 
     /**
@@ -108,18 +107,18 @@ public class DataSmoothing {
         if(beginIndex < 0)
             beginIndex = 0;
 
-        if(endIndex >= this.y.length)
-            endIndex = this.y.length - 1;
+        if(endIndex >= this.y.size())
+            endIndex = this.y.size() - 1;
 
         for (int j = beginIndex; j <= endIndex; j++) {
-            sum += this.y[j];
+            sum += this.y.get(j);
         }
 
         return sum / this.w;
     }
 
     /**
-     * Returns the data smooth value by Hybrid method.
+     * Returns the data smooth value by Hybrid method. While doesn't work :(
      *
      * @param i index of the input value from input array
      * @return data smooth value
@@ -136,8 +135,8 @@ public class DataSmoothing {
         if(beginSortingIndex < 0)
             beginSortingIndex = 0;
 
-        if(endSortingIndex >= this.y.length)
-            endSortingIndex = this.y.length - 1;
+        if(endSortingIndex >= this.y.size())
+            endSortingIndex = this.y.size() - 1;
 
         int j = (int) (this.w - this.p * this.w);
 
@@ -148,7 +147,7 @@ public class DataSmoothing {
         }
 
         for(int m = j; m <= w; ++m) {
-            sum += this.y[m];
+            sum += this.y.get(m);
         }
 
         return sum / (this.p * this.w);
