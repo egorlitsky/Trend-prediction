@@ -3,6 +3,9 @@ package main.java.ru.suai.computing;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 
+/**
+ * Class implements the methods for trend predictions
+ */
 public class Predictor {
     /**
      * Degree of the square

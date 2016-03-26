@@ -5,7 +5,6 @@ import java.util.Arrays;
 
 /**
  * It is a class for data smoothing / filtering.
- *
  */
 public class DataSmoothing {
 
