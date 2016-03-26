@@ -28,37 +28,52 @@ public class Main {
     private static void testPredictionAndDataSmoothing() {
         Random r = new Random();
 
-        int arrayLength = 50,   // size of array for testing
-                minRandomValue = -25, // minimum value of number for randomize data
-                maxRandomValue = 25,    // maximum value of number for randomize data
+        int arrayLength = 1000,   // size of array for testing
+                minRandomValue = -10, // minimum value of number for randomize data
+                maxRandomValue = 10,    // maximum value of number for randomize data
                 k = 4,  // coefficient k in function (k * x + b)
                 b = 6,  // coefficient b in function (k * x + b)
                 w = 5; // the window of moving averaging
 
         double p = 0.2; // proportion of maximum values for averaging
 
-        ArrayList<Double> y = new ArrayList<Double>();  // collection for generated data
-        ArrayList<Double> yPredicted = new ArrayList<Double>(); // collection for predicted data
+        double currentSmoothValue = 0, currentPredictedValue = 0;
+
+        ArrayList<Double> yGenerated = new ArrayList<Double>();
+
         ArrayList<Double> ySmoothed = new ArrayList<Double>();  // collection for smoothed data
 
-        Predictor predictor = new Predictor(w);
-        DataSmoothing ds = new DataSmoothing(y, w, p);
+        ArrayList<Double> yPredicted = new ArrayList<Double>();
 
-        for(int i = 0; i < arrayLength; ++i) {
-            // generation new value
-            double generateNumber = k * i + b + minRandomValue + (maxRandomValue - minRandomValue) * r.nextDouble();
+        DataSmoothing ds = new DataSmoothing(w, p);
 
-            y.add(generateNumber);
-            yPredicted.add(predictor.getPredict(y));
-        }
+        Predictor pr = new Predictor(w, w, 3, 100);
 
-        // data smoothing
-        for(int i = 0; i < arrayLength; ++i) {
-            ySmoothed.add(ds.getMovingAverageValue(i));
+        for(int i = 1; i <= arrayLength; ++i) {
+            double generatedNumber = Math.sqrt(i) + minRandomValue + (maxRandomValue - minRandomValue) * r.nextDouble();
+            System.out.println(Math.sqrt(i));
+            ds.addValue(generatedNumber);
+
+            if(i > w) {
+                currentSmoothValue = ds.getHybridSmoothValue();
+                pr.addValue(currentSmoothValue);
+            }
+
+            if(i > w * 2) {
+                currentPredictedValue = pr.getPredict();
+                pr.computeFuturePredictions();
+
+                if(pr.isQosViolated())
+                    System.out.println(pr.getQosViolatedTime());
+            }
+
+            yGenerated.add(generatedNumber);
+            ySmoothed.add(currentSmoothValue);
+            yPredicted.add(currentPredictedValue);
         }
 
         // saving into .csv files
-        saveArrayListToCsv(y, "gen");
+        saveArrayListToCsv(yGenerated, "gen");
         saveArrayListToCsv(yPredicted, "prediction");
         saveArrayListToCsv(ySmoothed, "smoothing");
     }

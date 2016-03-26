@@ -1,47 +1,49 @@
 package main.java.ru.suai.computing;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 
 /**
- * It is a class for modeling and testing of the data smoothing.
+ * It is a class for data smoothing / filtering.
  *
  */
 public class DataSmoothing {
-    // exceptions messages
-    public static final String ERR_Y_ARRAY_IS_NOT_DEFINED = "ERR: Y array is not defined!";
-    public static final String ERR_BEGIN_OR_END_INDEX_OF_SORTING_IS_INCORRECT = "ERR: Begin or end index of sorting is incorrect!";
 
     /**
-     * Input data array.
+     * Queue for store the current smoothing window values.
      */
-    private ArrayList<Double> y;
+    private ArrayDeque<Double> y;
 
     /**
-     * The window of moving averaging.
+     * Copy of the queue for computing in Hybrid method of data smoothing.
+     */
+    private Double[] yArray;
+
+    /**
+     * The window of smoothing data.
      */
     private int w;
 
     /**
-     * Proportion ov maximum values for averaging.
+     * Given percentage of the maximum values of all window.
+     * Parameter for Hybrid method.
      */
     private double p;
 
     /**
      * It is constructor of the class.
      *
-     * @param y Input data array
-     * @param w The window of moving averaging
-     * @param p Proportion ov maximum values for averaging
+     * @param w the window of data smoothing
+     * @param p given percentage of the maximum values of all window
      */
-    public DataSmoothing(ArrayList<Double> y, int w, double p) {
-        this.y = y;
+    public DataSmoothing(int w, double p) {
+        this.y = new ArrayDeque<Double>();
         this.w = w;
         this.p = p;
     }
 
     /**
-     * Returns the proportion ov maximum values for averaging
+     * Returns the given percentage of the maximum values of all window
      * @return p
      */
     public double getP() {
@@ -49,7 +51,7 @@ public class DataSmoothing {
     }
 
     /**
-     * Sets the proportion ov maximum values for averaging
+     * Sets the given percentage of the maximum values of all window
      * @param p proportion ov maximum values for averaging
      */
     public void setP(double p) {
@@ -57,7 +59,7 @@ public class DataSmoothing {
     }
 
     /**
-     * Returns the window of moving averaging
+     * Returns current window value
      * @return w
      */
     public int getW() {
@@ -65,89 +67,68 @@ public class DataSmoothing {
     }
 
     /**
-     * Sets the window of moving averaging
-     * @param w window of moving averaging
+     * Sets the window for data smoothing
+     * @param w value of the window for data smoothing
      */
     public void setW(int w) {
         this.w = w;
     }
 
     /**
-     * Sorts input array from beginSortingIndex to endSortingIndex.
-     * For hybrid smoothing of data
-     *
-     * @param beginSortingIndex the first index of the sorting
-     * @param endSortingIndex the last index of the sorting
-     *
-     * @throws Exception
+     * Converts queue with elements of window
+     * into array for access via indexes.
      */
-    private void sortArray(int beginSortingIndex, int endSortingIndex) throws Exception {
-        if(this.y == null)
-            throw new Exception(ERR_Y_ARRAY_IS_NOT_DEFINED);
-
-        if(beginSortingIndex < 0 || endSortingIndex >= this.y.size() || beginSortingIndex >= endSortingIndex) {
-            throw new Exception(ERR_BEGIN_OR_END_INDEX_OF_SORTING_IS_INCORRECT);
+    private void convertQueueToArray() {
+        this.yArray = new Double[this.y.size()];
+        int count = 0;
+        for (Double aY : this.y) {
+            this.yArray[count++] = aY;
         }
+    }
 
-        Arrays.sort(this.y.toArray(), beginSortingIndex, endSortingIndex);
+    /**
+     * Adds the new value into queue with elements of the window.
+     * @param newValue new value for data smoothing
+     */
+    public void addValue(double newValue) {
+        this.y.addLast(newValue);
+
+        if(this.y.size() > this.w)
+            this.y.pollFirst();
+
+        this.convertQueueToArray();
     }
 
     /**
      * Returns the moving average value.
      *
-     * @param i index of the input value from input array
-     * @return moving average value
+     * @return moving average value for current window
      */
-    public double getMovingAverageValue(int i) {
+    public double getMovingAverageValue() {
         double sum = 0;
 
-        int beginIndex = i - this.w / 2,
-                endIndex = i + this.w / 2;
-
-        if(beginIndex < 0)
-            beginIndex = 0;
-
-        if(endIndex >= this.y.size())
-            endIndex = this.y.size() - 1;
-
-        for (int j = beginIndex; j <= endIndex; j++) {
-            sum += this.y.get(j);
+        for (Double yData : this.yArray) {
+            sum += yData;
         }
 
         return sum / this.w;
     }
 
     /**
-     * Returns the data smooth value by Hybrid method. While doesn't work :(
+     * Returns the smoothed value for current window
+     * by the Hybrid method.
      *
-     * @param i index of the input value from input array
-     * @return data smooth value
+     * @return the smoothed value
      */
-    public double getHybridSmoothValue(int i) {
+    public double getHybridSmoothValue() {
+        int beginIndex = this.w - (int) (this.p * this.w),  // from algorithm
+                sum = 0;
 
-        // TODO: check w and p parameters, check sorting indexes
+        // sorting
+        Arrays.sort(this.yArray, 0, this.w - 1);
 
-        int beginSortingIndex = i - this.w / 2,
-                endSortingIndex = i + this.w / 2;
-
-        double sum = 0;
-
-        if(beginSortingIndex < 0)
-            beginSortingIndex = 0;
-
-        if(endSortingIndex >= this.y.size())
-            endSortingIndex = this.y.size() - 1;
-
-        int j = (int) (this.w - this.p * this.w);
-
-        try {
-            this.sortArray(beginSortingIndex, endSortingIndex);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        for(int m = j; m <= w; ++m) {
-            sum += this.y.get(m);
+        for(int i = beginIndex; i < this.w; ++i) {
+            sum += this.yArray[i];
         }
 
         return sum / (this.p * this.w);

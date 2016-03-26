@@ -1,5 +1,6 @@
 package main.java.ru.suai.computing;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 
 public class Predictor {
@@ -9,9 +10,39 @@ public class Predictor {
     public static final int SQUARE_DEGREE = 2;
 
     /**
+     * ArrayList with input workload statistic.
+     */
+    private ArrayDeque<Double> y;
+
+    /**
+     * Data structure with future predictions.
+     */
+    private ArrayList<Double> futurePredictions;
+
+    /**
+     * Copy of the queue in array for access via indexes.
+     */
+    private Double[] yArray;
+
+    /**
      * Window of the statistic
      */
-    private int w;
+    private int predictWindow;
+
+    /**
+     * 'a' coefficient for prediction
+     */
+    private double a;
+
+    /**
+     * 'b' coefficient for prediction
+     */
+    private double b;
+
+    /**
+     * Current time moment ('x' in algorithm)
+     */
+    private int timeCounter; // TODO: int?
 
     /**
      * The first sum of the 'a'-coefficient formula
@@ -34,22 +65,27 @@ public class Predictor {
     private double sumOfTimeSquare;
 
     /**
-     * 'a' coefficient
+     * Count of the elements for future predictions.
      */
-    private double a;
+    private int predictFutureTime;
 
     /**
-     * 'b' coefficient
+     * The required maximum of the workload value.
      */
-    private double b;
+    private double qos;
 
     /**
-     * ArrayList with input workload statistic.
+     * Time moment value where the qos may be violated
      */
-    private ArrayList<Double> y;
+    private int qosViolatedTime;
 
-    public Predictor(int w) {
-        this.w = w;
+    public Predictor(int smoothingWindow, int predictWindow, int predictFutureTime, double qos) {
+        this.y = new ArrayDeque<Double>();
+        this.predictWindow = predictWindow;
+        this.timeCounter = smoothingWindow + 1; // TODO: CHECK THIS PARAMETER
+
+        this.predictFutureTime = predictFutureTime;
+        this.qos = qos;
 
         this.sumOfDataAndTimeProd = 0;
         this.sumOfTime = 0;
@@ -76,49 +112,105 @@ public class Predictor {
     }
 
     /**
+     *
+     * @return time moment value where the qos may be violated
+     */
+    public int getQosViolatedTime() {
+        return qosViolatedTime;
+    }
+
+    /**
+     * Converts queue with elements of window
+     * into array for access via indexes.
+     */
+    private void convertQueueToArray() {
+        this.yArray = new Double[this.y.size()];
+
+        int count = 0;
+        for (Double aY : this.y) {
+            this.yArray[count++] = aY;
+        }
+    }
+
+    /**
+     * Adds the new value into queue with elements of the window.
+     * @param newValue new value for prediction
+     */
+    public void addValue(double newValue) {
+        this.y.addLast(newValue);
+
+        if(this.y.size() > this.predictWindow)
+            this.y.pollFirst();
+
+        this.convertQueueToArray();
+    }
+
+    /**
      * Computes the second coefficient for prediction.
      */
     private void computeCoefficientA() {
-        int beginIndex = this.y.size() - this.w;    // index of the statistic begin
-
-        if (beginIndex < 0)
-            beginIndex = 0;
-
-        for (int x = beginIndex; x < this.y.size(); ++x) {
-            this.sumOfDataAndTimeProd += (x + 1) * this.y.get(x);   // (x + 1) because x may be zero
-            this.sumOfTime += x + 1;
-            this.sumOfData += this.y.get(x);
-            this.sumOfTimeSquare += Math.pow(x + 1, SQUARE_DEGREE);
+        for (Double aYArray : this.yArray) {
+            this.sumOfDataAndTimeProd += (timeCounter) * aYArray;   // (x + 1) because x may be zero
+            this.sumOfTime += timeCounter;
+            this.sumOfData += aYArray;
+            this.sumOfTimeSquare += Math.pow(timeCounter, SQUARE_DEGREE);
         }
 
-        this.a = (sumOfDataAndTimeProd - (sumOfTime * sumOfData) / this.w)
-                / (sumOfTimeSquare - Math.pow(sumOfTime, SQUARE_DEGREE) / this.w);
+        this.a = (sumOfDataAndTimeProd - (sumOfTime * sumOfData) / this.predictWindow)
+                / (sumOfTimeSquare - Math.pow(sumOfTime, SQUARE_DEGREE) / this.predictWindow);
     }
 
     /**
      * Computes the second coefficient for prediction.
      */
     private void computeCoefficientB() {
-        this.b = (this.sumOfData - this.a * this.sumOfTime) / this.w;
+        this.b = (this.sumOfData - this.a * this.sumOfTime) / this.predictWindow;
     }
 
     /**
-     * Returns the new predicted value based on  input statistics.
+     * Returns the new predicted value based on
+     * input statistics from queue.
      *
-     * @param y ArrayList with the input statistics
      * @return the new predicted value
      */
-    public double getPredict(ArrayList<Double> y) {
-        this.y = y;
-
+    public double getPredict() {
         // computing coefficients
         computeCoefficientA();
         computeCoefficientB();
 
-        double prediction = this.a * (y.size() + 1) + this.b;
+        double prediction = this.a * (timeCounter) + this.b;
 
-        if (Double.isNaN(prediction))    // for some values of the window result is NaN
+        ++timeCounter;
+
+        if (Double.isNaN(prediction))   // may be div on '0'
             return 0;
         else return prediction;
+    }
+
+    /**
+     * Computes the future predictions and fill futurePredictions
+     * ArrayList with size of predictFutureTime.
+     */
+    public void computeFuturePredictions() {
+        this.futurePredictions = new ArrayList<Double>();
+
+        for (int i = 0; i < this.predictFutureTime; i++) {
+            this.futurePredictions.add(this.a * (timeCounter + i) + this.b);
+        }
+    }
+
+    /**
+     * Return true if qos was violated or false if else and computes the qosViolatedTime
+     * @return true if qos was violated or false if else
+     */
+    public boolean isQosViolated() {
+        for (int i = 0; i < this.futurePredictions.size(); ++i) {
+            if(this.futurePredictions.get(i) > this.qos) {
+                this.qosViolatedTime = this.timeCounter + this.predictWindow + i;
+                return true;
+            }
+        }
+
+        return false;
     }
 }
