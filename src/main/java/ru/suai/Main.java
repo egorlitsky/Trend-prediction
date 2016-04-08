@@ -17,6 +17,8 @@ import java.io.IOException;
 public class Main {
 
     public static final int FETCH_PERIOD = 60000;
+    public static final int PLOT_RENDERING_DELAY = 1000;
+    public static final int PLOT_POINTS_COUNT = 10;
     public static final String GENERATED_PLOT_TITLE = "generated";
     public static final String SMOOTHED_PLOT_TITLE = "smoothed";
     public static final String PREDICTED_PLOT_TITLE = "predicted";
@@ -39,9 +41,9 @@ public class Main {
 
         double p = 0.8, // proportion of maximum values for averaging
                 currentSmoothValue = 0,
-                currentPredictedValue = 0;
+                currentPredictedValue = 0,
+                generatedNumber = 0;
 
-        RrdGenerator rrdGen = new RrdGenerator("diskstat_sda1_io_time");
         DataSmoothing ds = new DataSmoothing(w, p);
         Predictor pr = new Predictor(w, w, futurePredicts, qos);
 
@@ -55,8 +57,10 @@ public class Main {
 
         // TODO: change
         while (true) {
-            double generatedNumber = rrdGen.getNextValue();
+            RrdGenerator rrdGen = new RrdGenerator("diskstat_sda1_io_time");
+            generatedNumber = rrdGen.getNextValue();
 
+            System.out.println(generatedNumber);
             ds.addValue(generatedNumber);
 
             if (i > w) {
@@ -72,19 +76,23 @@ public class Main {
                     System.out.println(pr.getQosViolatedTime());
             }
 
+            if (i % PLOT_POINTS_COUNT == 0) {
+                dataset.clear();
+            }
+
             dataset.addValue(generatedNumber, GENERATED_PLOT_TITLE, "" + i);
             dataset.addValue(currentSmoothValue, SMOOTHED_PLOT_TITLE, "" + i);
             dataset.addValue(currentPredictedValue, PREDICTED_PLOT_TITLE, "" + (i + 1));
+
+            // update graphic
+            chart.pack();
+            ++i;
 
             try {
                 Thread.sleep(FETCH_PERIOD);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
-            // update graphic
-            chart.pack();
-            ++i;
         }
     }
 
@@ -130,12 +138,16 @@ public class Main {
                     System.out.println(pr.getQosViolatedTime());
             }
 
+            if (i % PLOT_POINTS_COUNT == 0) {
+                dataset.clear();
+            }
+
             dataset.addValue(generatedNumber, GENERATED_PLOT_TITLE, "" + i);
             dataset.addValue(currentSmoothValue, SMOOTHED_PLOT_TITLE, "" + i);
             dataset.addValue(currentPredictedValue, PREDICTED_PLOT_TITLE, "" + (i + 1));
 
             try {
-                Thread.sleep(1000);
+                Thread.sleep(PLOT_RENDERING_DELAY);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
