@@ -3,10 +3,8 @@ package ru.suai;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.ui.RefineryUtilities;
 
-import ru.suai.computing.ArtificialGenerator;
-import ru.suai.computing.DataSmoothing;
-import ru.suai.computing.Predictor;
-import ru.suai.computing.RrdGenerator;
+import ru.suai.computing.*;
+import ru.suai.generators.*;
 import ru.suai.view.Visualisator;
 
 import java.io.IOException;
@@ -24,6 +22,7 @@ public class Main {
     public static final String PREDICTED_PLOT_TITLE = "predicted";
 
     public static void main(String[] args) {
+        //testMySQLConnection();
         testArtificialGenerator();
 
 /*        try {
@@ -31,6 +30,11 @@ public class Main {
         } catch (IOException e) {
             e.printStackTrace();
         }*/
+    }
+
+    private static void testMySQLConnection() {
+        IOGenerator iogen = new IOGenerator("jdbc:mysql://192.168.245.1:3306/Shop", "gen", "pwd123");
+        iogen.generateRequests(5, 10, "SELECT * FROM products");
     }
 
     private static void testRRD4J() throws IOException {

@@ -1,4 +1,4 @@
-package ru.suai.computing;
+package ru.suai.generators;
 
 import java.util.Random;
 

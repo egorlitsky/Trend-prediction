@@ -1,4 +1,4 @@
-package ru.suai.computing;
+package ru.suai.generators;
 
 /**
  * Interface for generating data of different types

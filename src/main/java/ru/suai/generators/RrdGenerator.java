@@ -1,4 +1,4 @@
-package ru.suai.computing;
+package ru.suai.generators;
 
 import org.rrd4j.core.FetchData;
 import org.rrd4j.core.FetchRequest;
