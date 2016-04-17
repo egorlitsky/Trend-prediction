@@ -22,21 +22,29 @@ public class Main {
     public static final String PREDICTED_PLOT_TITLE = "predicted";
 
     public static void main(String[] args) {
-        //testMySQLConnection();
         testArtificialGenerator();
+/*        testMySQLConnection();
 
-/*        try {
+        try {
             testRRD4J();
         } catch (IOException e) {
             e.printStackTrace();
         }*/
     }
 
+    /**
+     * Blank for testing on storage emulator.
+     */
     private static void testMySQLConnection() {
         IOGenerator iogen = new IOGenerator("jdbc:mysql://192.168.245.1:3306/Shop", "gen", "pwd123");
         iogen.generateRequests(5, 10, "SELECT * FROM products");
     }
 
+    /**
+     * Testing on Ganglia's monitoring data.
+     *
+     * @throws IOException
+     */
     private static void testRRD4J() throws IOException {
         int w = 5,
                 i = 1,
@@ -59,7 +67,6 @@ public class Main {
 
         chart.setVisible(true);
 
-        // TODO: change
         while (true) {
             RrdGenerator rrdGen = new RrdGenerator("diskstat_sda1_io_time");
             generatedNumber = rrdGen.getNextValue();
@@ -74,10 +81,7 @@ public class Main {
 
             if (i > w * 2) {
                 currentPredictedValue = pr.getPredict();
-                pr.computeFuturePredictions();
-
-                if (pr.isQosViolated())
-                    System.out.println(pr.getQosViolatedTime());
+                //pr.computeFuturePredictions();
             }
 
             if (i % PLOT_POINTS_COUNT == 0) {
@@ -100,32 +104,37 @@ public class Main {
         }
     }
 
-    private static void testArtificialGenerator() {
-        int arrayLength = 50,   // size of array for testing
-                randomness = 100,
-                k = 4,  // coefficient k in function (k * x + b)
-                w = 5,
+    /**
+     * Testing work of predictor on generated linear / degree/ exponential data.
+     * Visualization shows plot with generated, smoothed and predicted data.
+     */
+    public static void testArtificialGenerator() {
+        int w = 10,
+                i = 1,
                 qos = 100,
-                futurePredicts = 3;
+                futurePredicts = 3,
+                pointsCount = 100;
 
-        double p = 0.8, // proportion of maximum values for averaging
+        double p = 0.3, // proportion of maximum values for averaging
                 currentSmoothValue = 0,
-                currentPredictedValue = 0;
+                currentPredictedValue = 0,
+                generatedNumber,
+                a = 4,
+                b = 2;
 
-        ArtificialGenerator a = new ArtificialGenerator(ArtificialGenerator.LINEAR_FUNCTION_TYPE, k, randomness);
         DataSmoothing ds = new DataSmoothing(w, p);
         Predictor pr = new Predictor(w, w, futurePredicts, qos);
 
-
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         Visualisator chart = new Visualisator(dataset);
+        ArtificialGenerator ag = new ArtificialGenerator(a, b, 25);
 
         RefineryUtilities.centerFrameOnScreen(chart);
 
         chart.setVisible(true);
 
-        for (int i = 1; i <= arrayLength; ++i) {
-            double generatedNumber = (Double) a.getNextValue(i);
+        for (int j = 1; j < pointsCount; j++) {
+            generatedNumber = (double) ag.getLinearValue(i);
 
             ds.addValue(generatedNumber);
 
@@ -136,10 +145,7 @@ public class Main {
 
             if (i > w * 2) {
                 currentPredictedValue = pr.getPredict();
-                pr.computeFuturePredictions();
-
-                if (pr.isQosViolated())
-                    System.out.println(pr.getQosViolatedTime());
+                //pr.computeFuturePredictions();
             }
 
             if (i % PLOT_POINTS_COUNT == 0) {
@@ -150,14 +156,15 @@ public class Main {
             dataset.addValue(currentSmoothValue, SMOOTHED_PLOT_TITLE, "" + i);
             dataset.addValue(currentPredictedValue, PREDICTED_PLOT_TITLE, "" + (i + 1));
 
+            // update graphic
+            chart.pack();
+            ++i;
+
             try {
                 Thread.sleep(PLOT_RENDERING_DELAY);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
-            // update graphic
-            chart.pack();
         }
     }
 }
