@@ -5,7 +5,7 @@ import org.jfree.ui.RefineryUtilities;
 
 import ru.suai.computing.*;
 import ru.suai.generators.*;
-import ru.suai.view.Visualisator;
+import ru.suai.view.Visualizator;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -63,7 +63,7 @@ public class Main {
 
 
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        Visualisator chart = new Visualisator(dataset);
+        Visualizator chart = new Visualizator(dataset);
 
         RefineryUtilities.centerFrameOnScreen(chart);
 
@@ -128,7 +128,7 @@ public class Main {
         Predictor pr = new Predictor(w, w, futurePredicts, qos);
 
         DefaultCategoryDataset dataSet = new DefaultCategoryDataset();
-        Visualisator chart = new Visualisator(dataSet);
+        Visualizator chart = new Visualizator(dataSet);
         ArtificialGenerator ag = new ArtificialGenerator(a, b, 25);
 
         RefineryUtilities.centerFrameOnScreen(chart);
@@ -202,7 +202,7 @@ public class Main {
         DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, 0.5);
 
         DefaultCategoryDataset dataSet = new DefaultCategoryDataset();
-        Visualisator chart = new Visualisator(dataSet);
+        Visualizator chart = new Visualizator(dataSet);
 
         RefineryUtilities.centerFrameOnScreen(chart);
         chart.setVisible(true);
