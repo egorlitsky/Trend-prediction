@@ -18,7 +18,7 @@ public class TestPredictor {
     private int testElementsCount;
 
     @Before
-    public void setUp() throws Exception { // TODO:add to pom
+    public void setUp() throws Exception {
         this.a = 10;
         this.b = 3;
         this.testElementsCount = 10;
@@ -71,7 +71,7 @@ public class TestPredictor {
         for (int i = 1; i <= testElementsCount; i++) {
             this.predictor.addValue((double) this.artificialGenerator.getLinearValue(i));
         }
-          
+
         this.predictor.getPredict();
 
         assertTrue(this.a == this.predictor.getLinearCoefficientA()
@@ -107,5 +107,38 @@ public class TestPredictor {
         assertTrue(this.a == this.predictor.getExponentialCoefficientA()
                 && this.b == this.predictor.getExponentialCoefficientB() &&
                 this.predictor.getCurrentFunctionType().equals(Predictor.EXPONENTIAL_FUNCTION_TYPE));
+    }
+
+    @Test
+    public void testPredictionByLinearFunction() {
+        this.predictor = new Predictor(0, 10, 0, 0);
+
+        for (int i = 1; i <= testElementsCount; i++) {
+            this.predictor.addValue((double) this.artificialGenerator.getLinearValue(i));
+        }
+
+        assertTrue((double) this.artificialGenerator.getLinearValue(testElementsCount + 1) == this.predictor.getPredict());
+    }
+
+    @Test
+    public void testPredictionByDegreeFunction() {
+        this.predictor = new Predictor(0, 10, 0, 0);
+
+        for (int i = 1; i <= testElementsCount; i++) {
+            this.predictor.addValue((double) this.artificialGenerator.getDegreeValue(i));
+        }
+
+        assertTrue((double) this.artificialGenerator.getDegreeValue(testElementsCount + 1) == this.predictor.getPredict());
+    }
+
+    @Test
+    public void testPredictionByExponentialFunction() {
+        this.predictor = new Predictor(0, 10, 0, 0);
+
+        for (int i = 1; i <= testElementsCount; i++) {
+            this.predictor.addValue((double) this.artificialGenerator.getExponentialValue(i));
+        }
+
+        assertTrue((double) this.artificialGenerator.getExponentialValue(testElementsCount + 1) == this.predictor.getPredict());
     }
 }
