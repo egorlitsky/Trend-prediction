@@ -392,7 +392,7 @@ public class Predictor {
 
     /**
      * Returns the new predicted value based on
-     * input statistics from queue in dependency of funtion type.
+     * input statistics from queue in dependency of function type.
      *
      * @return the new predicted value
      */
@@ -468,8 +468,13 @@ public class Predictor {
      * @return reduced number
      */
     private double getRoundedDouble(double roundingNumber) {
-        BigDecimal bd = new BigDecimal(roundingNumber);
+        try {
+            BigDecimal bd = new BigDecimal(roundingNumber);
 
-        return bd.setScale(COEFFICIENTS_ACCURACY, BigDecimal.ROUND_HALF_UP).doubleValue();
+            return bd.setScale(COEFFICIENTS_ACCURACY, BigDecimal.ROUND_HALF_UP).doubleValue();
+        } catch (NumberFormatException e) {
+
+            return roundingNumber;
+        }
     }
 }

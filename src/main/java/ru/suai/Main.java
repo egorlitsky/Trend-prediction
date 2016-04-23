@@ -8,6 +8,7 @@ import ru.suai.generators.*;
 import ru.suai.view.Visualisator;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 /**
  * It's the main class of the project.
@@ -22,8 +23,9 @@ public class Main {
     public static final String PREDICTED_PLOT_TITLE = "predicted";
 
     public static void main(String[] args) {
-        testArtificialGenerator();
-/*        testMySQLConnection();
+        testDiurnalGenerator();
+/*        testArtificialGenerator();
+        testMySQLConnection();
 
         try {
             testRRD4J();
@@ -125,8 +127,8 @@ public class Main {
         DataSmoothing ds = new DataSmoothing(w, p);
         Predictor pr = new Predictor(w, w, futurePredicts, qos);
 
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        Visualisator chart = new Visualisator(dataset);
+        DefaultCategoryDataset dataSet = new DefaultCategoryDataset();
+        Visualisator chart = new Visualisator(dataSet);
         ArtificialGenerator ag = new ArtificialGenerator(a, b, 25);
 
         RefineryUtilities.centerFrameOnScreen(chart);
@@ -149,12 +151,12 @@ public class Main {
             }
 
             if (i % PLOT_POINTS_COUNT == 0) {
-                dataset.clear();
+                dataSet.clear();
             }
 
-            dataset.addValue(generatedNumber, GENERATED_PLOT_TITLE, "" + i);
-            dataset.addValue(currentSmoothValue, SMOOTHED_PLOT_TITLE, "" + i);
-            dataset.addValue(currentPredictedValue, PREDICTED_PLOT_TITLE, "" + (i + 1));
+            dataSet.addValue(generatedNumber, GENERATED_PLOT_TITLE, "" + i);
+            dataSet.addValue(currentSmoothValue, SMOOTHED_PLOT_TITLE, "" + i);
+            dataSet.addValue(currentPredictedValue, PREDICTED_PLOT_TITLE, "" + (i + 1));
 
             // update graphic
             chart.pack();
@@ -162,6 +164,73 @@ public class Main {
 
             try {
                 Thread.sleep(PLOT_RENDERING_DELAY);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * It simulates the operation of the predictor with generated
+     * diurnal function and shows the results on the plot.
+     */
+    private static void testDiurnalGenerator() {
+        int w = 5,
+                i = 1,
+                qos = 100,
+                futurePredicts = 3,
+                pointsCount = 100;
+
+        double p = 0.8, // proportion of maximum values for averaging
+                currentSmoothValue = 0,
+                currentPredictedValue = 0,
+                generatedNumber;
+
+        HashMap<DiurnalGenerator.modulation, Double> modulation = new HashMap<>();
+        modulation.put(DiurnalGenerator.modulation.AMPLITUDE, 5.0);
+        modulation.put(DiurnalGenerator.modulation.PERIOD, 5.0);
+        modulation.put(DiurnalGenerator.modulation.PHASE, 0.0);
+
+        HashMap<DiurnalGenerator.distribution, String> distribution = new HashMap<>();
+        distribution.put(DiurnalGenerator.distribution.DISTRIBUTION_TYPE, DiurnalGenerator.POISSON_DISTRIBUTION_TYPE);
+        distribution.put(DiurnalGenerator.distribution.SHAPE_TYPE, Predictor.LINEAR_FUNCTION_TYPE);
+        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_A, "1.0");
+        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_B, "2.0");
+
+        DataSmoothing ds = new DataSmoothing(w, p);
+        Predictor pr = new Predictor(w, w, futurePredicts, qos);
+        DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, 0.5);
+
+        DefaultCategoryDataset dataSet = new DefaultCategoryDataset();
+        Visualisator chart = new Visualisator(dataSet);
+
+        RefineryUtilities.centerFrameOnScreen(chart);
+        chart.setVisible(true);
+
+        for (int j = 1; j < pointsCount; j++) {
+            generatedNumber = diurnalGenerator.getValue(i);
+            ds.addValue(generatedNumber);
+
+            if (i > w) {
+                currentSmoothValue = ds.getHybridSmoothValue();
+                pr.addValue(currentSmoothValue);
+            }
+
+            if (i > w * 2) {
+                currentPredictedValue = pr.getPredict();
+                //pr.computeFuturePredictions();
+            }
+
+            dataSet.addValue(generatedNumber, GENERATED_PLOT_TITLE, "" + i);
+            dataSet.addValue(currentSmoothValue, SMOOTHED_PLOT_TITLE, "" + i);
+            dataSet.addValue(currentPredictedValue, PREDICTED_PLOT_TITLE, "" + (i + 1));
+
+            // update graphic
+            chart.pack();
+            ++i;
+
+            try {
+                Thread.sleep(PLOT_RENDERING_DELAY / 2);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
