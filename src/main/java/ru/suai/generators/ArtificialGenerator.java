@@ -39,6 +39,27 @@ public class ArtificialGenerator implements Generator {
         this.b = b;
     }
 
+    /**
+     * Sets new value of the 'a' coefficient
+     * @param a coefficient 'a' for generating function
+     */
+    public void setA(double a) {
+        this.a = a;
+    }
+
+    /**
+     * Sets new value of the 'b' coefficient
+     * @param b coefficient 'b' for generating function
+     */
+    public void setB(double b) {
+        this.b = b;
+    }
+
+    /**
+     * Returns the new value of the linear function
+     * @param x input value
+     * @return new value of the linear function
+     */
     @Override
     public Object getLinearValue(double x) {
         double minRandomValue =  - this.randomness / 2,
@@ -48,6 +69,11 @@ public class ArtificialGenerator implements Generator {
         return (this.a * x + this.b + randomValue);
     }
 
+    /**
+     * Returns the new value of the degree function
+     * @param x input value
+     * @return new value of the degree function
+     */
     @Override
     public Object getDegreeValue(double x) {
         double minRandomValue =  - this.randomness / 2,
@@ -57,6 +83,11 @@ public class ArtificialGenerator implements Generator {
         return (this.a * Math.pow(x, this.b) + randomValue);
     }
 
+    /**
+     * Returns the new value of the exponential function
+     * @param x input value
+     * @return new value of the exponential function
+     */
     @Override
     public Object getExponentialValue(double x) {
         double minRandomValue =  - this.randomness / 2,
