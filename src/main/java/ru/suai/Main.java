@@ -56,7 +56,7 @@ public class Main {
         double p = 0.8, // proportion of maximum values for averaging
                 currentSmoothValue = 0,
                 currentPredictedValue = 0,
-                generatedNumber = 0;
+                generatedNumber;
 
         DataSmoothing ds = new DataSmoothing(w, p);
         Predictor pr = new Predictor(w, w, futurePredicts, qos);
@@ -187,7 +187,7 @@ public class Main {
                 generatedNumber;
 
         HashMap<DiurnalGenerator.modulation, Double> modulation = new HashMap<>();
-        modulation.put(DiurnalGenerator.modulation.AMPLITUDE, 5.0);
+        modulation.put(DiurnalGenerator.modulation.AMPLITUDE, 2.0);
         modulation.put(DiurnalGenerator.modulation.PERIOD, 5.0);
         modulation.put(DiurnalGenerator.modulation.PHASE, 0.0);
 
@@ -199,7 +199,7 @@ public class Main {
 
         DataSmoothing ds = new DataSmoothing(w, p);
         Predictor pr = new Predictor(w, w, futurePredicts, qos);
-        DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, 0.5);
+        DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, 10);
 
         DefaultCategoryDataset dataSet = new DefaultCategoryDataset();
         Visualizator chart = new Visualizator(dataSet);
