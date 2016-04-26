@@ -14,7 +14,7 @@ import java.util.ArrayList;
  * It is class for visualisation the generated, smoothed and
  * predicted data on the graphic.
  */
-public class Visualisator extends ApplicationFrame {
+public class Visualizator extends ApplicationFrame {
     // String constants
     public static final String CSV_FILE_FORMAT = ".csv";
     public static final String CSV_DELIMITER = "\n";
@@ -30,7 +30,7 @@ public class Visualisator extends ApplicationFrame {
     /**
      * Class for visualisation the results of trend-prediction work
      */
-    public Visualisator(DefaultCategoryDataset dataSet) {
+    public Visualizator(DefaultCategoryDataset dataSet) {
         super(WINDOW_TITLE);
         JFreeChart lineChart = ChartFactory.createLineChart("", COLUMN_TITLE, ROW_TITLE,
                 dataSet,
