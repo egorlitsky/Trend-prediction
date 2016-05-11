@@ -1,5 +1,6 @@
 package ru.suai;
 
+import org.apache.log4j.*;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.ui.RefineryUtilities;
 
@@ -8,38 +9,58 @@ import ru.suai.generators.*;
 import ru.suai.view.Visualizator;
 
 import java.io.IOException;
+import java.nio.file.*;
 import java.util.HashMap;
 
 /**
  * It's the main class of the project.
  */
 public class Main {
-
+    /**
+     * Time period of Ganglia data getting.
+     */
     public static final int FETCH_PERIOD = 60000;
+
+    /**
+     * Value of plot rendering delay.
+     */
     public static final int PLOT_RENDERING_DELAY = 1000;
+
+    /**
+     * Count of points on the plot.
+     */
     public static final int PLOT_POINTS_COUNT = 10;
+
+    /**
+     * Title of generated data line.
+     */
     public static final String GENERATED_PLOT_TITLE = "generated";
+
+    /**
+     * Title of smoothed data line.
+     */
     public static final String SMOOTHED_PLOT_TITLE = "smoothed";
+
+    /**
+     * Title of predicted data line on the plot.
+     */
     public static final String PREDICTED_PLOT_TITLE = "predicted";
+
+    /**
+     * Logger for result check.
+     */
+    private static final Logger logger = Logger.getLogger(Main.class);
 
     public static void main(String[] args) {
         testDiurnalGenerator();
-/*        testArtificialGenerator();
-        testMySQLConnection();
+        //testArtificialGenerator();
 
-        try {
+/*        try {
             testRRD4J();
         } catch (IOException e) {
             e.printStackTrace();
-        }*/
-    }
-
-    /**
-     * Blank for testing on storage emulator.
-     */
-    private static void testMySQLConnection() {
-        IOGenerator iogen = new IOGenerator("jdbc:mysql://192.168.245.1:3306/Shop", "gen", "pwd123");
-        iogen.generateRequests(5, 10, "SELECT * FROM products");
+        }
+		*/
     }
 
     /**
@@ -58,8 +79,23 @@ public class Main {
                 currentPredictedValue = 0,
                 generatedNumber;
 
+        PropertyConfigurator.configure("log4j.properties");
+
         DataSmoothing ds = new DataSmoothing(w, p);
         Predictor pr = new Predictor(w, w, futurePredicts, qos);
+
+        HashMap<DiurnalGenerator.modulation, Double> modulation = new HashMap<>();
+        modulation.put(DiurnalGenerator.modulation.AMPLITUDE, 2.0);
+        modulation.put(DiurnalGenerator.modulation.PERIOD, 5.0);
+        modulation.put(DiurnalGenerator.modulation.PHASE, 0.0);
+
+        HashMap<DiurnalGenerator.distribution, String> distribution = new HashMap<>();
+        distribution.put(DiurnalGenerator.distribution.DISTRIBUTION_TYPE, DiurnalGenerator.POISSON_DISTRIBUTION_TYPE);
+        distribution.put(DiurnalGenerator.distribution.SHAPE_TYPE, Predictor.LINEAR_FUNCTION_TYPE);
+        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_A, "3.0");
+        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_B, "2.0");
+        DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, 10);
+        //IOGenerator iogen = new IOGenerator("jdbc:mysql://192.168.119.134:3306/test", "generator", "asdf1234");
 
 
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
@@ -69,11 +105,39 @@ public class Main {
 
         chart.setVisible(true);
 
+        FileSystem system = FileSystems.getDefault();
+        Path original = system.getPath("1.txt");
+        Path target = system.getPath("2.txt");
+
         while (true) {
-            RrdGenerator rrdGen = new RrdGenerator("diskstat_sda1_io_time");
+            int requestsCount = (int)diurnalGenerator.getValue(i);
+            for (int k = 0; k < requestsCount; k++) {
+                Files.copy(original, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+/*            switch ((int) (Math.random() * 3)) {
+                case 0:
+                    iogen.generateRequests((int)diurnalGenerator.getValue(i), 500, "SELECT * FROM test");
+                    System.out.println("1");
+                    break;
+                case 1:
+                    iogen.generateRequests((int)diurnalGenerator.getValue(i), 500, "SELECT * FROM test1");
+                    System.out.println("2");
+                    break;
+                case 2:
+                    System.out.println("3");
+                    iogen.generateRequests((int)diurnalGenerator.getValue(i), 500, "SELECT * FROM test2");
+                    break;
+            }*/
+
+
+            RrdGenerator rrdGen = new RrdGenerator("diskstat_sda1_writes");
             generatedNumber = rrdGen.getNextValue();
 
-            System.out.println(generatedNumber);
+            logger.info("Time moment: " + i + ", I/O requests: " + requestsCount
+                    + ", RRD data: " + generatedNumber);
+
+
             ds.addValue(generatedNumber);
 
             if (i > w) {
