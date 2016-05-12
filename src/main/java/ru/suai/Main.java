@@ -52,15 +52,14 @@ public class Main {
     private static final Logger logger = Logger.getLogger(Main.class);
 
     public static void main(String[] args) {
-        testDiurnalGenerator();
-        //testArtificialGenerator();
 
+        //testDiurnalGenerator();
+        testArtificialGenerator();
 /*        try {
             testRRD4J();
         } catch (IOException e) {
             e.printStackTrace();
-        }
-		*/
+        }*/
     }
 
     /**
@@ -77,7 +76,8 @@ public class Main {
         double p = 0.8, // proportion of maximum values for averaging
                 currentSmoothValue = 0,
                 currentPredictedValue = 0,
-                generatedNumber;
+                generatedNumber,
+                period = 5.0;
 
         PropertyConfigurator.configure("log4j.properties");
 
@@ -86,7 +86,7 @@ public class Main {
 
         HashMap<DiurnalGenerator.modulation, Double> modulation = new HashMap<>();
         modulation.put(DiurnalGenerator.modulation.AMPLITUDE, 2.0);
-        modulation.put(DiurnalGenerator.modulation.PERIOD, 5.0);
+        modulation.put(DiurnalGenerator.modulation.PERIOD, period);
         modulation.put(DiurnalGenerator.modulation.PHASE, 0.0);
 
         HashMap<DiurnalGenerator.distribution, String> distribution = new HashMap<>();
@@ -179,7 +179,7 @@ public class Main {
                 i = 1,
                 qos = 100,
                 futurePredicts = 3,
-                pointsCount = 100;
+                pointsCount = 300;
 
         double p = 0.3, // proportion of maximum values for averaging
                 currentSmoothValue = 0,
@@ -187,6 +187,8 @@ public class Main {
                 generatedNumber,
                 a = 4,
                 b = 2;
+
+        boolean predictFlag = false;
 
         DataSmoothing ds = new DataSmoothing(w, p);
         Predictor pr = new Predictor(w, w, futurePredicts, qos);
@@ -200,23 +202,24 @@ public class Main {
         chart.setVisible(true);
 
         for (int j = 1; j < pointsCount; j++) {
+
             generatedNumber = (double) ag.getLinearValue(i);
 
             ds.addValue(generatedNumber);
 
-            if (i > w) {
+            if (i % w == 0) {
                 currentSmoothValue = ds.getHybridSmoothValue();
                 pr.addValue(currentSmoothValue);
             }
 
-            if (i > w * 2) {
+            if (i % w == 0 && (i / w) % w == 0) {
                 currentPredictedValue = pr.getPredict();
                 //pr.computeFuturePredictions();
             }
 
-            if (i % PLOT_POINTS_COUNT == 0) {
+/*            if (i % PLOT_POINTS_COUNT == 0) {
                 dataSet.clear();
-            }
+            }*/
 
             dataSet.addValue(generatedNumber, GENERATED_PLOT_TITLE, "" + i);
             dataSet.addValue(currentSmoothValue, SMOOTHED_PLOT_TITLE, "" + i);
@@ -226,11 +229,11 @@ public class Main {
             chart.pack();
             ++i;
 
-            try {
+/*            try {
                 Thread.sleep(PLOT_RENDERING_DELAY);
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            }
+            }*/
         }
     }
 
