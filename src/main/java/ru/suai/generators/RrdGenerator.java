@@ -7,7 +7,6 @@ import static org.rrd4j.ConsolFun.AVERAGE;
 
 import java.io.IOException;
 
-
 /**
  * It is a class for generation values of the real workload via Ganglia .RRD database.
  * RRD-database fills by values of monitoring metric.
@@ -34,7 +33,7 @@ public class RrdGenerator {
     /**
      * Time period of the collecting data by Ganglia for our metric.
      */
-    public static final int COLLECT_TIME_PERIOD = 60;
+    public static final int COLLECT_TIME_PERIOD = 100;
 
     /**
      * Name of the monitoring metric.
@@ -96,7 +95,7 @@ public class RrdGenerator {
 
         fetchValues = fetchData.getValues();
 
-        for(int i = 0; i < fetchData.getColumnCount(); ++i) {
+        for (int i = 0; i < fetchData.getColumnCount(); ++i) {
             for (int j = 0; j < fetchData.getRowCount(); j++) {
                 if(!Double.isNaN(fetchValues[i][j]))
                     lastFetchedValue = fetchValues[i][j];
