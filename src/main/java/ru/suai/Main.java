@@ -6,10 +6,10 @@ import org.jfree.ui.RefineryUtilities;
 
 import ru.suai.computing.*;
 import ru.suai.generators.*;
+import ru.suai.monitoring.*;
 import ru.suai.view.Visualizator;
 
 import java.io.IOException;
-import java.nio.file.*;
 import java.util.HashMap;
 
 /**
@@ -57,13 +57,13 @@ public class Main {
     private static final Logger logger = Logger.getLogger(Main.class);
 
     public static void main(String[] args) {
-        testOnDiurnalGenerator();
-/*        testOnArtificialGenerator();
+        //testOnDiurnalGenerator();
+        //testOnArtificialGenerator();
         try {
             testOnGangliaMonitoring();
         } catch (IOException e) {
             e.printStackTrace();
-        }*/
+        }
     }
 
     /**
@@ -83,6 +83,7 @@ public class Main {
                 currentPredictedValue = 0,
                 generatedNumber,
                 period = 5.0;
+        boolean databaseRequests = false;
 
         PropertyConfigurator.configure("log4j.properties");
 
@@ -101,46 +102,49 @@ public class Main {
         distribution.put(DiurnalGenerator.distribution.COEFFICIENT_B, "2.0");
         DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, 10);
 
-        //IOGenerator iogen = new IOGenerator("jdbc:mysql://192.168.119.134:3306/test", "generator", "asdf1234");
-
         final XYSeries generated = new XYSeries(GENERATED_PLOT_TITLE);
         final XYSeries smoothed = new XYSeries(SMOOTHED_PLOT_TITLE);
         final XYSeries predicted = new XYSeries(PREDICTED_PLOT_TITLE);
         Visualizator chart = new Visualizator(generated, smoothed, predicted);
+        UserSimulator userSim;
 
         RefineryUtilities.centerFrameOnScreen(chart);
 
         chart.setVisible(true);
 
-        FileSystem system = FileSystems.getDefault();
-        Path original = system.getPath("1.txt");
-        Path target = system.getPath("2.txt");
+        if (databaseRequests) {
+            userSim = new UserSimulator("jdbc:mysql://localhost/test", "generator", "asdf1234");
+        } else {
+            userSim = new UserSimulator("1.txt", "2.txt");
+        }
 
         while (true) {
-            int requestsCount = (int) diurnalGenerator.getValue(i);
-            for (int k = 0; k < requestsCount; k++) {
-                Files.copy(original, target, StandardCopyOption.REPLACE_EXISTING);
-            }
-/*
-            switch ((int) (Math.random() * 3)) {
-                case 0:
-                    iogen.generateRequests((int)diurnalGenerator.getValue(i), 500, "SELECT * FROM test");
-                    System.out.println("1");
-                    break;
-                case 1:
-                    iogen.generateRequests((int)diurnalGenerator.getValue(i), 500, "SELECT * FROM test1");
-                    System.out.println("2");
-                    break;
-                case 2:
-                    System.out.println("3");
-                    iogen.generateRequests((int)diurnalGenerator.getValue(i), 500, "SELECT * FROM test2");
-                    break;
-            }*/
+            int usersCount = (int) diurnalGenerator.getValue(i),
+                requestsCount = 500;
 
-            RrdGenerator rrdGen = new RrdGenerator("diskstat_sda1_writes");
+            if (databaseRequests) {
+                switch ((int) (Math.random() * 3)) {
+                    case 0:
+                        userSim.generateRequests(usersCount, requestsCount, "SELECT * FROM test");
+                        System.out.println("1");
+                        break;
+                    case 1:
+                        userSim.generateRequests(usersCount, requestsCount, "SELECT * FROM test1");
+                        System.out.println("2");
+                        break;
+                    case 2:
+                        System.out.println("3");
+                        userSim.generateRequests(usersCount, requestsCount, "SELECT * FROM test2");
+                        break;
+                }
+            } else {
+                userSim.generateRequests(usersCount, requestsCount, "");
+            }
+
+            GangliaRrdMonitor rrdGen = new GangliaRrdMonitor("diskstat_sda1_writes");
             generatedNumber = rrdGen.getNextValue();
 
-            logger.info("Time moment: " + i + ", I/O requests: " + requestsCount
+            logger.info("Time moment: " + i + ", I/O requests: " + usersCount
                     + ", RRD data: " + generatedNumber);
 
             ds.addValue(generatedNumber);
@@ -181,11 +185,12 @@ public class Main {
      * Visualization shows plot with generated, smoothed and predicted data.
      */
     public static void testOnArtificialGenerator() {
-        int w = 5,
+        int w = 25,
                 i = 1,
                 qos = 100,
+                randomness = 450,
                 futurePredicts = 3,
-                pointsCount = 100;
+                pointsCount = 1000;
 
         double p = 0.65, // proportion of maximum values for averaging
                 currentSmoothValue = 0,
@@ -193,6 +198,7 @@ public class Main {
                 generatedNumber,
                 a = 4,
                 b = 6;
+        String functionType = Predictor.LINEAR_FUNCTION_TYPE;
 
         DataSmoothing ds = new DataSmoothing(w, p);
         Predictor pr = new Predictor(w, w, futurePredicts, qos);
@@ -202,7 +208,7 @@ public class Main {
         final XYSeries predicted = new XYSeries(PREDICTED_PLOT_TITLE);
 
         Visualizator chart = new Visualizator(generated, smoothed, predicted);
-        ArtificialGenerator ag = new ArtificialGenerator(a, b, 150);
+        ArtificialGenerator ag = new ArtificialGenerator(a, b, randomness, functionType);
 
         RefineryUtilities.centerFrameOnScreen(chart);
 
@@ -210,7 +216,7 @@ public class Main {
 
         for (int j = 1; j < pointsCount; j++) {
 
-            generatedNumber = (double) ag.getLinearValue(i);
+            generatedNumber = (double) ag.getValue(i);
 
             ds.addValue(generatedNumber);
 

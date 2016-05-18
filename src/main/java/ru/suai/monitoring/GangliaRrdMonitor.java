@@ -1,4 +1,4 @@
-package ru.suai.generators;
+package ru.suai.monitoring;
 
 import org.rrd4j.core.FetchData;
 import org.rrd4j.core.FetchRequest;
@@ -14,7 +14,7 @@ import java.io.IOException;
  * You need to check and may be change the RRD_PATH and COLLECT_TIME_PERIOD with dependency of
  * your Ganglia configuration.
  */
-public class RrdGenerator {
+public class GangliaRrdMonitor {
     /**
      * Path with rrds of Ganglia.
      */
@@ -51,7 +51,7 @@ public class RrdGenerator {
      * @param metricName name of the monitoring metric
      * @throws IOException
      */
-    public RrdGenerator(String metricName) throws IOException {
+    public GangliaRrdMonitor(String metricName) throws IOException {
         this.metricName = metricName;
 
         this.rrdDataBase = new RrdDb(metricName + RRD_DATABASE_FORMAT, RRD_PATH + metricName + RRD_DATABASE_FORMAT);

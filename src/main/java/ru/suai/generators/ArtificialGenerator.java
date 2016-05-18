@@ -1,5 +1,7 @@
 package ru.suai.generators;
 
+import ru.suai.computing.Predictor;
+
 import java.util.Random;
 
 /**
@@ -27,14 +29,21 @@ public class ArtificialGenerator implements Generator {
     private double b;
 
     /**
+     * Type of generated function
+     */
+    private String functionType;
+
+    /**
      * Constructor of the class.
      * @param a coefficient 'a' for generating function
      * @param b coefficient 'b' for generating function
      * @param randomness maximum value of the randomness
      */
-    public ArtificialGenerator(double a, double b, int randomness) {
+    public ArtificialGenerator(double a, double b, int randomness, String initialType) {
         this.randomGenerator = new Random();
         this.randomness = randomness;
+
+        this.functionType = initialType;
         this.a = a;
         this.b = b;
     }
@@ -56,17 +65,20 @@ public class ArtificialGenerator implements Generator {
     }
 
     /**
+     * Sets the type of function which generates the values.
+     * @param functionType function type
+     */
+    public void setFunctionType(String functionType) {
+        this.functionType = functionType;
+    }
+
+    /**
      * Returns the new value of the linear function
      * @param x input value
      * @return new value of the linear function
      */
-    @Override
-    public Object getLinearValue(double x) {
-        double minRandomValue =  - this.randomness / 2,
-                maxRandomValue = this.randomness / 2,
-                randomValue = minRandomValue + (maxRandomValue - minRandomValue) * this.randomGenerator.nextDouble();
-
-        return (this.a * x + this.b + randomValue);
+    private double getLinearValue(double x) {
+        return (this.a * x + this.b);
     }
 
     /**
@@ -74,13 +86,8 @@ public class ArtificialGenerator implements Generator {
      * @param x input value
      * @return new value of the degree function
      */
-    @Override
-    public Object getDegreeValue(double x) {
-        double minRandomValue =  - this.randomness / 2,
-                maxRandomValue = this.randomness / 2,
-                randomValue = minRandomValue + (maxRandomValue - minRandomValue) * this.randomGenerator.nextDouble();
-
-        return (this.a * Math.pow(x, this.b) + randomValue);
+    private double getDegreeValue(double x) {
+        return (this.a * Math.pow(x, this.b));
     }
 
     /**
@@ -88,12 +95,31 @@ public class ArtificialGenerator implements Generator {
      * @param x input value
      * @return new value of the exponential function
      */
-    @Override
-    public Object getExponentialValue(double x) {
-        double minRandomValue =  - this.randomness / 2,
+    private double getExponentialValue(double x) {
+        return (this.a * Math.pow(this.b, x));
+    }
+
+    public Object getValue(double x) {
+        double generatedValue,
+                minRandomValue =  - this.randomness / 2,
                 maxRandomValue = this.randomness / 2,
                 randomValue = minRandomValue + (maxRandomValue - minRandomValue) * this.randomGenerator.nextDouble();
 
-        return (this.a * Math.pow(this.b, x) + randomValue);
+        switch (this.functionType) {
+            case Predictor.LINEAR_FUNCTION_TYPE:
+                generatedValue = this.getLinearValue(x) + randomValue;
+                break;
+            case Predictor.DEGREE_FUNCTION_TYPE:
+                generatedValue = this.getDegreeValue(x) + randomValue;
+                break;
+            case Predictor.EXPONENTIAL_FUNCTION_TYPE:
+                generatedValue = this.getExponentialValue(x) + randomValue;
+                break;
+            default:
+                generatedValue = 0;
+                break;
+        }
+
+        return generatedValue;
     }
 }

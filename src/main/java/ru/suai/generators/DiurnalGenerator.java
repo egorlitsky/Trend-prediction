@@ -1,7 +1,5 @@
 package ru.suai.generators;
 
-import ru.suai.computing.Predictor;
-
 import java.util.HashMap;
 import java.util.Random;
 
@@ -104,7 +102,7 @@ public class DiurnalGenerator {
         double a = Double.valueOf(distribution.get(DiurnalGenerator.distribution.COEFFICIENT_A));
         double b = Double.valueOf(distribution.get(DiurnalGenerator.distribution.COEFFICIENT_B));
 
-        this.artificialGenerator = new ArtificialGenerator(a, b, 0); // '0' because less randomness
+        this.artificialGenerator = new ArtificialGenerator(a, b, 0, this.shapeType); // '0' because less randomness
         this.randomGenerator = new Random();
 
         this.mean = mean;
@@ -133,18 +131,7 @@ public class DiurnalGenerator {
         }
 
         if (this.generatedNumbersCount % this.period == 0) {
-            // check of the shape type
-            switch (this.shapeType) {
-                case Predictor.LINEAR_FUNCTION_TYPE:
-                    this.baseNumber = (Double)this.artificialGenerator.getLinearValue(this.growArgument);
-                    break;
-                case Predictor.DEGREE_FUNCTION_TYPE:
-                    this.baseNumber = (Double)this.artificialGenerator.getDegreeValue(this.growArgument);
-                    break;
-                case Predictor.EXPONENTIAL_FUNCTION_TYPE:
-                    this.baseNumber = (Double)this.artificialGenerator.getExponentialValue(this.growArgument);
-                    break;
-            }
+            this.baseNumber = (Double)this.artificialGenerator.getValue(this.growArgument);
 
             ++this.growArgument;
         }
