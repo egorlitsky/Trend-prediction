@@ -9,8 +9,11 @@ import ru.suai.generators.*;
 import ru.suai.monitoring.*;
 import ru.suai.view.Visualizator;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
+import java.util.Properties;
 
 /**
  * This class tests and visualize the work of
@@ -56,13 +59,169 @@ public class Main {
      */
     private static final Logger logger = Logger.getLogger(Main.class);
 
+    /**
+     * Window for prediction and data smoothing.
+     */
+    private static int w;
+
+    /**
+     * Value of Qos requirement.
+     */
+    private static double qos;
+
+    /**
+     * Counts of future prediction since current.
+     */
+    private static int futurePredictsCount;
+
+    /**
+     * Proportion of max values in hybrid data smoothing.
+     */
+    private static double p;
+
+    /**
+     * Flag for DiurnalGenerator. (true - will be
+     * generated requests to MySQL DB, false - will be
+     * copied file on the disks).
+     */
+    private static boolean dataBaseRequests;
+
+    /**
+     * Amplitude value for DiurnalGenerator.
+     */
+    private static double amplitude;
+
+    /**
+     * Period value for DiurnalGenerator.
+     */
+    private static double period;
+
+    /**
+     * Phase value for DiurnalGenerator.
+     */
+    private static double phase;
+
+    /**
+     * Type of distribution in DiurnalGenerator.
+     */
+    private static String distributionType;
+
+    /**
+     * Type of grow function.
+     */
+    private static String shapeType;
+
+    /**
+     * a coefficient in functions.
+     */
+    private static double a;
+
+    /**
+     * b coefficient in functions.
+     */
+    private static double b;
+
+    /**
+     * Value of mean in poisson distribution.
+     */
+    private static double mean;
+
+    /**
+     * Count of requests of single user
+     * at MySQL requests of file copying.
+     */
+    private static int requestsCount;
+
+    /**
+     * Value of stochastic in ArtificialGenerator.
+     */
+    private static int randomness;
+
+    /**
+     * Count of point on the plot.
+     */
+    private static int pointsCount;
+
+    private static String modelingType;
+
     public static void main(String[] args) {
-        //testOnDiurnalGenerator();
-        //testOnArtificialGenerator();
+        String settingsFileName = "settings.properties";
+
+        if (args.length != 1) {
+            throw new RuntimeException("Not enough arguments!\nRun the program with single argument Settings file name");
+        } else {
+            settingsFileName = args[0];
+        }
+
+        loadSettings(settingsFileName);
+
+        switch (modelingType) {
+            case "ARTIFICIAL":
+                testOnArtificialGenerator();
+                break;
+            case "DIURNAL":
+                testOnDiurnalGenerator();
+                break;
+            case "GANGLIA":
+                try {
+                    testOnGangliaMonitoring();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+        }
+    }
+
+    /**
+     * This method loads common properties of peogram,
+     * parameters for workload generator's,
+     * parameters of the view.
+     *
+     * @param settingsFileName name of properties file
+     */
+    private static void loadSettings(String settingsFileName) {
+        Properties propertyFile = new Properties();
+        InputStream input = null;
+
         try {
-            testOnGangliaMonitoring();
-        } catch (IOException e) {
-            e.printStackTrace();
+            input = new FileInputStream(settingsFileName);
+
+            // load a properties file
+            propertyFile.load(input);
+
+            // load common program parameters
+            modelingType = propertyFile.getProperty("MODELING_TYPE");
+            w = Integer.parseInt(propertyFile.getProperty("PREDICT_WINDOW"));
+            qos = Double.parseDouble(propertyFile.getProperty("QOS_REQUIREMENT"));
+            futurePredictsCount = Integer.parseInt(propertyFile.getProperty("FUTURE_PREDICTS_COUNT"));
+            p = Double.parseDouble(propertyFile.getProperty("PROPORTION_OF_MAX"));
+            dataBaseRequests = Boolean.parseBoolean(propertyFile.getProperty("IS_DATABASE_REQUESTS"));
+
+            // load generator's properties
+            amplitude = Double.parseDouble(propertyFile.getProperty("SIN_AMPLITUDE"));
+            period = Double.parseDouble(propertyFile.getProperty("SIN_PERIOD"));
+            phase = Double.parseDouble(propertyFile.getProperty("SIN_PHASE"));
+            distributionType = propertyFile.getProperty("DISTRIBUTION_TYPE");
+            shapeType = propertyFile.getProperty("SHAPE_TYPE");
+
+            a = Double.parseDouble(propertyFile.getProperty("A_COEFFICIENT"));
+            b = Double.parseDouble(propertyFile.getProperty("B_COEFFICIENT"));
+            mean = Double.parseDouble(propertyFile.getProperty("MEAN_VALUE"));
+            requestsCount = Integer.parseInt(propertyFile.getProperty("REQUESTS_COUNT"));
+            randomness = Integer.parseInt(propertyFile.getProperty("RANDOMNESS"));
+
+            // load view properties
+            pointsCount = Integer.parseInt(propertyFile.getProperty("POINTS_COUNT"));
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -73,34 +232,28 @@ public class Main {
      * @throws IOException
      */
     private static void testOnGangliaMonitoring() throws IOException {
-        int w = 5,
-                i = 1,
-                qos = 100,
-                futurePredicts = 3;
-
-        double p = 0.8, // proportion of maximum values for averaging
-                currentSmoothValue = 0,
-                currentPredictedValue = 0,
-                generatedNumber,
-                period = 5.0;
-        boolean databaseRequests = false;
+        double currentSmoothValue = 0,
+                currentPredictedValue,
+                generatedNumber;
+        int i = 1;
 
         PropertyConfigurator.configure("log4j.properties");
 
-        DataSmoothing ds = new DataSmoothing(w, p);
-        Predictor pr = new Predictor(w, w, futurePredicts, qos);
+        DataSmoothing ds = new DataSmoothing((int)period, p);
+        Predictor pr = new Predictor((int)period, (int)period, futurePredictsCount, qos);
 
         HashMap<DiurnalGenerator.modulation, Double> modulation = new HashMap<>();
-        modulation.put(DiurnalGenerator.modulation.AMPLITUDE, 2.0);
+        modulation.put(DiurnalGenerator.modulation.AMPLITUDE, amplitude);
         modulation.put(DiurnalGenerator.modulation.PERIOD, period);
-        modulation.put(DiurnalGenerator.modulation.PHASE, 0.0);
+        modulation.put(DiurnalGenerator.modulation.PHASE, phase);
 
         HashMap<DiurnalGenerator.distribution, String> distribution = new HashMap<>();
-        distribution.put(DiurnalGenerator.distribution.DISTRIBUTION_TYPE, DiurnalGenerator.POISSON_DISTRIBUTION_TYPE);
-        distribution.put(DiurnalGenerator.distribution.SHAPE_TYPE, Predictor.LINEAR_FUNCTION_TYPE);
-        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_A, "3.0");
-        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_B, "2.0");
-        DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, 10);
+        distribution.put(DiurnalGenerator.distribution.DISTRIBUTION_TYPE, distributionType);
+        distribution.put(DiurnalGenerator.distribution.SHAPE_TYPE, shapeType);
+        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_A, String.valueOf(a));
+        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_B, String.valueOf(b));
+
+        DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, mean);
 
         final XYSeries generated = new XYSeries(GENERATED_PLOT_TITLE);
         final XYSeries smoothed = new XYSeries(SMOOTHED_PLOT_TITLE);
@@ -112,17 +265,16 @@ public class Main {
 
         chart.setVisible(true);
 
-        if (databaseRequests) {
+        if (dataBaseRequests) {
             userSim = new UserSimulator("jdbc:mysql://localhost/test", "generator", "asdf1234");
         } else {
             userSim = new UserSimulator("1.txt", "2.txt");
         }
 
         while (true) {
-            int usersCount = (int) diurnalGenerator.getValue(i),
-                requestsCount = 500;
+            int usersCount = (int) diurnalGenerator.getValue(i);
 
-            if (databaseRequests) {
+            if (dataBaseRequests) {
                 switch ((int) (Math.random() * 3)) {
                     case 0:
                         userSim.generateRequests(usersCount, requestsCount, "SELECT * FROM test");
@@ -149,21 +301,20 @@ public class Main {
 
             ds.addValue(generatedNumber);
 
-            if (i % w == 0) {
+            if (i % (int)period == 0) {
                 currentSmoothValue = ds.getHybridSmoothValue();
                 pr.addValue(currentSmoothValue);
             }
 
-            if (i % w == 0 && i > w * w) {
+            if (i % (int)period == 0 && i > (int)period * (int)period) {
                 currentPredictedValue = pr.getPredict();
-                predicted.add((double) i, currentPredictedValue);
+                predicted.add((double) i + (int)period / 2, currentPredictedValue);
                 //pr.computeFuturePredictions();
             }
 
 /*            if (i % PLOT_POINTS_COUNT == 0) {
                 dataSet.clear();
             }*/
-
 
             generated.add((double) i, generatedNumber);
             smoothed.add((double) i, currentSmoothValue);
@@ -185,30 +336,21 @@ public class Main {
      * Visualization shows plot with generated, smoothed and predicted data.
      */
     public static void testOnArtificialGenerator() {
-        int w = 25,
-                i = 1,
-                qos = 100,
-                randomness = 450,
-                futurePredicts = 3,
-                pointsCount = 1000;
+        int i = 1;
 
-        double p = 0.65, // proportion of maximum values for averaging
-                currentSmoothValue = 0,
+        double currentSmoothValue = 0,
                 currentPredictedValue,
-                generatedNumber,
-                a = 4,
-                b = 6;
-        String functionType = Predictor.LINEAR_FUNCTION_TYPE;
+                generatedNumber;
 
         DataSmoothing ds = new DataSmoothing(w, p);
-        Predictor pr = new Predictor(w, w, futurePredicts, qos);
+        Predictor pr = new Predictor(w, w, futurePredictsCount, qos);
 
         final XYSeries generated = new XYSeries(GENERATED_PLOT_TITLE);
         final XYSeries smoothed = new XYSeries(SMOOTHED_PLOT_TITLE);
         final XYSeries predicted = new XYSeries(PREDICTED_PLOT_TITLE);
 
         Visualizator chart = new Visualizator(generated, smoothed, predicted);
-        ArtificialGenerator ag = new ArtificialGenerator(a, b, randomness, functionType);
+        ArtificialGenerator ag = new ArtificialGenerator(a, b, randomness, shapeType);
 
         RefineryUtilities.centerFrameOnScreen(chart);
 
@@ -220,14 +362,14 @@ public class Main {
 
             ds.addValue(generatedNumber);
 
-            if (i % w == 0) {
+            if (i % w  == 0) {
                 currentSmoothValue = ds.getHybridSmoothValue();
                 pr.addValue(currentSmoothValue);
             }
 
             if (i % w == 0 && i > w * w) {
                 currentPredictedValue = pr.getPredict();
-                predicted.add((double) i, currentPredictedValue);
+                predicted.add((double) (i + w / 2), currentPredictedValue);
                 //pr.computeFuturePredictions();
             }
 
@@ -256,31 +398,26 @@ public class Main {
      * diurnal function and shows the results on the plot.
      */
     private static void testOnDiurnalGenerator() {
-        int w = 5,
-                i = 1,
-                qos = 100,
-                futurePredicts = 3,
-                pointsCount = 100;
+        int i = 1;
 
-        double p = 0.8, // proportion of maximum values for averaging
-                currentSmoothValue = 0,
+        double currentSmoothValue = 0,
                 currentPredictedValue,
                 generatedNumber;
 
         HashMap<DiurnalGenerator.modulation, Double> modulation = new HashMap<>();
-        modulation.put(DiurnalGenerator.modulation.AMPLITUDE, 25.0);
-        modulation.put(DiurnalGenerator.modulation.PERIOD, 5.0);
-        modulation.put(DiurnalGenerator.modulation.PHASE, 0.0);
+        modulation.put(DiurnalGenerator.modulation.AMPLITUDE, amplitude);
+        modulation.put(DiurnalGenerator.modulation.PERIOD, period);
+        modulation.put(DiurnalGenerator.modulation.PHASE, phase);
 
         HashMap<DiurnalGenerator.distribution, String> distribution = new HashMap<>();
-        distribution.put(DiurnalGenerator.distribution.DISTRIBUTION_TYPE, DiurnalGenerator.POISSON_DISTRIBUTION_TYPE);
-        distribution.put(DiurnalGenerator.distribution.SHAPE_TYPE, Predictor.DEGREE_FUNCTION_TYPE);
-        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_A, "2.1");
-        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_B, "1.3");
+        distribution.put(DiurnalGenerator.distribution.DISTRIBUTION_TYPE, distributionType);
+        distribution.put(DiurnalGenerator.distribution.SHAPE_TYPE, shapeType);
+        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_A, String.valueOf(a));
+        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_B, String.valueOf(b));
 
-        DataSmoothing ds = new DataSmoothing(w, p);
-        Predictor pr = new Predictor(w, w, futurePredicts, qos);
-        DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, 50);
+        DataSmoothing ds = new DataSmoothing((int)period, p);
+        Predictor pr = new Predictor((int)period, (int)period, futurePredictsCount, qos);
+        DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, mean);
 
         final XYSeries generated = new XYSeries(GENERATED_PLOT_TITLE);
         final XYSeries smoothed = new XYSeries(SMOOTHED_PLOT_TITLE);
@@ -296,15 +433,15 @@ public class Main {
 
             ds.addValue(generatedNumber);
 
-            if (i % w == 0) {
+            if (i % (int)period == 0) {
                 currentSmoothValue = ds.getHybridSmoothValue();
                 pr.addValue(currentSmoothValue);
             }
 
-            if (i % w == 0 && i > w * w) {
+            if (i % (int)period == 0 && i > (int)period * (int)period) {
                 currentPredictedValue = pr.getPredict();
-                predicted.add((double) i, currentPredictedValue);
-                //pr.computeFuturePredictions();
+                predicted.add((double) i + (int)period / 2, currentPredictedValue);
+//                pr.computeFuturePredictions();
             }
 
 /*            if (i % PLOT_POINTS_COUNT == 0) {
