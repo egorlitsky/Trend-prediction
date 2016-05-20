@@ -2,7 +2,6 @@ package ru.suai;
 
 import org.apache.log4j.*;
 import org.jfree.data.xy.XYSeries;
-import org.jfree.ui.RefineryUtilities;
 
 import ru.suai.computing.*;
 import ru.suai.generators.*;
@@ -12,8 +11,7 @@ import ru.suai.view.Visualizator;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * This class tests and visualize the work of
@@ -30,34 +28,26 @@ public class Main {
     public static final int FETCH_PERIOD = 60000;
 
     /**
-     * Value of plot rendering delay.
-     */
-    public static final int PLOT_RENDERING_DELAY = 1000;
-
-    /**
-     * Count of points on the plot.
-     */
-    public static final int PLOT_POINTS_COUNT = 10;
-
-    /**
      * Title of generated data line.
      */
-    public static final String GENERATED_PLOT_TITLE = "Generated";
+    public static final String GENERATED_PLOT_TITLE = "Generated data";
 
     /**
      * Title of smoothed data line.
      */
-    public static final String SMOOTHED_PLOT_TITLE = "Smoothed";
+    public static final String SMOOTHED_PLOT_TITLE = "Filtered data";
 
     /**
      * Title of predicted data line on the plot.
      */
-    public static final String PREDICTED_PLOT_TITLE = "Predicted";
+    public static final String PREDICTED_PLOT_TITLE = "Trend prediction";
 
     /**
      * Logger for result check.
      */
     private static final Logger logger = Logger.getLogger(Main.class);
+
+    private static String modelingType;
 
     /**
      * Window for prediction and data smoothing.
@@ -142,9 +132,37 @@ public class Main {
      */
     private static int pointsCount;
 
-    private static String modelingType;
+    /**
+     * Delay in mills after render one point of plot.
+     */
+    private static long renderingPlotDelay;
 
-    public static void main(String[] args) {
+    /**
+     * Count of showing points on the plot.
+     */
+    private static int showingPointsCount;
+
+    /**
+     * Flag of removing old point if was added new point.
+     */
+    private static boolean clearPlot;
+
+    /**
+     * Path of original file for experiment with copying.
+     */
+    private static String originalFileName;
+
+    /**
+     * Path of copy file for experiment with copying.
+     */
+    private static String copyFileName;
+
+    /**
+     * Name of disk metric for monitoring by Ganglia.
+     */
+    private static String monitoringMetricName;
+
+    public static void main(String[] args) throws IOException {
         String settingsFileName = "settings.properties";
 
         if (args.length != 1) {
@@ -155,6 +173,7 @@ public class Main {
 
         loadSettings(settingsFileName);
 
+        // selecting mode of program
         switch (modelingType) {
             case "ARTIFICIAL":
                 testOnArtificialGenerator();
@@ -212,6 +231,14 @@ public class Main {
 
             // load view properties
             pointsCount = Integer.parseInt(propertyFile.getProperty("POINTS_COUNT"));
+            showingPointsCount = Integer.parseInt(propertyFile.getProperty("SHOWING_POINTS_COUNT"));
+            renderingPlotDelay = Long.valueOf(propertyFile.getProperty("RENDERING_DELAY"));
+            clearPlot = Boolean.valueOf(propertyFile.getProperty("CLEAR_PLOT"));
+
+            // Ganglia and UserImitator Settings
+            originalFileName = propertyFile.getProperty("ORIGINAL_FILE_PATH");
+            copyFileName = propertyFile.getProperty("FILE_PATH_FOR_COPY");
+            monitoringMetricName = propertyFile.getProperty("MONITORING_METRIC_NAME");
         } catch (IOException ex) {
             ex.printStackTrace();
         } finally {
@@ -255,26 +282,27 @@ public class Main {
 
         DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, mean);
 
+        // initialize the view
         final XYSeries generated = new XYSeries(GENERATED_PLOT_TITLE);
         final XYSeries smoothed = new XYSeries(SMOOTHED_PLOT_TITLE);
         final XYSeries predicted = new XYSeries(PREDICTED_PLOT_TITLE);
-        Visualizator chart = new Visualizator(generated, smoothed, predicted);
+        Visualizator view = new Visualizator(generated, smoothed, predicted);
+        view.setQosOnPlot(qos);
+
         UserSimulator userSim;
-
-        RefineryUtilities.centerFrameOnScreen(chart);
-
-        chart.setVisible(true);
 
         if (dataBaseRequests) {
             userSim = new UserSimulator("jdbc:mysql://localhost/test", "generator", "asdf1234");
         } else {
-            userSim = new UserSimulator("1.txt", "2.txt");
+            userSim = new UserSimulator(originalFileName, copyFileName);
         }
 
+        // main loop
         while (true) {
             int usersCount = (int) diurnalGenerator.getValue(i);
 
             if (dataBaseRequests) {
+                // experiment fir database
                 switch ((int) (Math.random() * 3)) {
                     case 0:
                         userSim.generateRequests(usersCount, requestsCount, "SELECT * FROM test");
@@ -290,14 +318,22 @@ public class Main {
                         break;
                 }
             } else {
+                // experiment with copying file
                 userSim.generateRequests(usersCount, requestsCount, "");
             }
 
-            GangliaRrdMonitor rrdGen = new GangliaRrdMonitor("diskstat_sda1_writes");
+            GangliaRrdMonitor rrdGen = new GangliaRrdMonitor(monitoringMetricName);
             generatedNumber = rrdGen.getNextValue();
 
-            logger.info("Time moment: " + i + ", I/O requests: " + usersCount
-                    + ", RRD data: " + generatedNumber);
+            // logging
+            logger.info("Time moment: " + i + ", I/O requests: " + usersCount + ", RRD data: " + generatedNumber);
+
+            // check for QoS
+            if (generatedNumber > qos) {
+                view.setAlertState(Visualizator.QOS_VIOLATED_STATUS);
+            } else {
+                view.setAlertState(Visualizator.QOS_COMPLIED_STATUS);
+            }
 
             ds.addValue(generatedNumber);
 
@@ -308,19 +344,27 @@ public class Main {
 
             if (i % (int)period == 0 && i > (int)period * (int)period) {
                 currentPredictedValue = pr.getPredict();
-                predicted.add((double) i + (int)period / 2, currentPredictedValue);
-                //pr.computeFuturePredictions();
+                predicted.add((double) (i + (int)period / 2), currentPredictedValue);
+                pr.computeFuturePredictions();
+
+                if (generatedNumber < qos && pr.isQosViolated()) {
+                    view.setAlertState(Visualizator.QOS_WILL_BE_VIOLATED_STATUS);
+                }
             }
 
-/*            if (i % PLOT_POINTS_COUNT == 0) {
-                dataSet.clear();
-            }*/
+            // clearing old points from plot
+            if (clearPlot && i > showingPointsCount) {
+                generated.remove(0);
+                smoothed.remove(0);
+
+                if (i % (int)period == 0 && i > (int)period * (int)period) {
+                    if (predicted.getItems().size() > showingPointsCount / (int)period)
+                        predicted.remove(0);
+                }
+            }
 
             generated.add((double) i, generatedNumber);
             smoothed.add((double) i, currentSmoothValue);
-
-            // update graphic
-            chart.pack();
             ++i;
 
             try {
@@ -335,9 +379,8 @@ public class Main {
      * Testing work of predictor on generated linear / degree/ exponential data.
      * Visualization shows plot with generated, smoothed and predicted data.
      */
-    public static void testOnArtificialGenerator() {
+    public static void testOnArtificialGenerator() throws IOException {
         int i = 1;
-
         double currentSmoothValue = 0,
                 currentPredictedValue,
                 generatedNumber;
@@ -349,16 +392,19 @@ public class Main {
         final XYSeries smoothed = new XYSeries(SMOOTHED_PLOT_TITLE);
         final XYSeries predicted = new XYSeries(PREDICTED_PLOT_TITLE);
 
-        Visualizator chart = new Visualizator(generated, smoothed, predicted);
+        Visualizator view = new Visualizator(generated, smoothed, predicted);
+        view.setQosOnPlot(qos);
+
         ArtificialGenerator ag = new ArtificialGenerator(a, b, randomness, shapeType);
 
-        RefineryUtilities.centerFrameOnScreen(chart);
-
-        chart.setVisible(true);
-
         for (int j = 1; j < pointsCount; j++) {
-
             generatedNumber = (double) ag.getValue(i);
+
+            if (generatedNumber > qos) {
+                view.setAlertState(Visualizator.QOS_VIOLATED_STATUS);
+            } else {
+                view.setAlertState(Visualizator.QOS_COMPLIED_STATUS);
+            }
 
             ds.addValue(generatedNumber);
 
@@ -370,26 +416,32 @@ public class Main {
             if (i % w == 0 && i > w * w) {
                 currentPredictedValue = pr.getPredict();
                 predicted.add((double) (i + w / 2), currentPredictedValue);
-                //pr.computeFuturePredictions();
+                pr.computeFuturePredictions();
+
+                if (generatedNumber < qos && pr.isQosViolated()) {
+                    view.setAlertState(Visualizator.QOS_WILL_BE_VIOLATED_STATUS);
+                }
             }
 
-/*            if (i % PLOT_POINTS_COUNT == 0) {
-                dataSet.clear();
-            }*/
+            if (clearPlot && i > showingPointsCount) {
+                generated.remove(0);
+                smoothed.remove(0);
 
+                if (i % w == 0 && i > w * w) {
+                    if (predicted.getItems().size() > showingPointsCount / w)
+                        predicted.remove(0);
+                }
+            }
 
             generated.add((double) i, generatedNumber);
             smoothed.add((double) i, currentSmoothValue);
-
-            // update graphic
-            chart.pack();
             ++i;
 
-/*            try {
-                Thread.sleep(PLOT_RENDERING_DELAY);
+            try {
+                Thread.sleep(renderingPlotDelay);
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            }*/
+            }
         }
     }
 
@@ -397,9 +449,8 @@ public class Main {
      * It simulates the operation of the predictor with generated
      * diurnal function and shows the results on the plot.
      */
-    private static void testOnDiurnalGenerator() {
+    private static void testOnDiurnalGenerator() throws IOException {
         int i = 1;
-
         double currentSmoothValue = 0,
                 currentPredictedValue,
                 generatedNumber;
@@ -422,45 +473,57 @@ public class Main {
         final XYSeries generated = new XYSeries(GENERATED_PLOT_TITLE);
         final XYSeries smoothed = new XYSeries(SMOOTHED_PLOT_TITLE);
         final XYSeries predicted = new XYSeries(PREDICTED_PLOT_TITLE);
-        Visualizator chart = new Visualizator(generated, smoothed, predicted);
-
-        RefineryUtilities.centerFrameOnScreen(chart);
-        chart.setVisible(true);
+        Visualizator view = new Visualizator(generated, smoothed, predicted);
+        view.setQosOnPlot(qos);
 
         for (int j = 1; j < pointsCount; j++) {
-
             generatedNumber = diurnalGenerator.getValue(i);
+
+            if (generatedNumber > qos) {
+                view.setAlertState(Visualizator.QOS_VIOLATED_STATUS);
+            } else {
+                view.setAlertState(Visualizator.QOS_COMPLIED_STATUS);
+            }
 
             ds.addValue(generatedNumber);
 
-            if (i % (int)period == 0) {
+            if (i % (int)period  == 0) {
                 currentSmoothValue = ds.getHybridSmoothValue();
                 pr.addValue(currentSmoothValue);
             }
 
             if (i % (int)period == 0 && i > (int)period * (int)period) {
                 currentPredictedValue = pr.getPredict();
-                predicted.add((double) i + (int)period / 2, currentPredictedValue);
-//                pr.computeFuturePredictions();
+                predicted.add((double) (i + (int)period / 2), currentPredictedValue);
+                pr.computeFuturePredictions();
+
+                if (generatedNumber < qos && pr.isQosViolated()) {
+                    view.setAlertState(Visualizator.QOS_WILL_BE_VIOLATED_STATUS);
+                }
             }
 
-/*            if (i % PLOT_POINTS_COUNT == 0) {
-                dataSet.clear();
-            }*/
+            if (clearPlot && i > showingPointsCount) {
+                generated.remove(0);
+                smoothed.remove(0);
 
+                if (i % (int)period == 0 && i > (int)period * (int)period) {
+                    if (predicted.getItems().size() > showingPointsCount / (int)period)
+                        predicted.remove(0);
+                }
+            }
 
             generated.add((double) i, generatedNumber);
             smoothed.add((double) i, currentSmoothValue);
-
-            // update graphic
-            chart.pack();
             ++i;
 
-/*            try {
-                Thread.sleep(PLOT_RENDERING_DELAY);
+            try {
+                Thread.sleep(renderingPlotDelay);
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            }*/
+            }
         }
     }
 }
+
+
+
