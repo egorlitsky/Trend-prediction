@@ -99,7 +99,7 @@ public class ArtificialGenerator implements Generator {
         return (this.a * Math.pow(this.b, x));
     }
 
-    public Object getValue(double x) {
+    public double getValue(double x) {
         double generatedValue,
                 minRandomValue =  - this.randomness / 2,
                 maxRandomValue = this.randomness / 2,

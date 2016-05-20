@@ -8,7 +8,7 @@ import java.util.Random;
  * constant distribution. Generated data has a linear, degree or exponential
  * shape.
  */
-public class DiurnalGenerator {
+public class DiurnalGenerator implements Generator {
     /**
      * Poisson distribution for stochastic character of the data.
      */
