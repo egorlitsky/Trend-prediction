@@ -30,8 +30,8 @@ public class Visualizator {
     public static final String ERROR_IN_SAVING_CSV_FILE = "Error in saving .CSV file";
 
     public static final String WINDOW_TITLE = "Storage IOPS trend prediction v.1.0";
-    public static final String COLUMN_TITLE = "Time moments";
-    public static final String ROW_TITLE = "Workload value";
+    public static final String COLUMN_TITLE = "Time (hours)";
+    public static final String ROW_TITLE = "Workload value (IO per minutes)";
 
     public static final String QOS_VIOLATED_STATUS = "VIOLATED";
     public static final String QOS_WILL_BE_VIOLATED_STATUS = "WILL_BE_VIOLATED";
@@ -71,11 +71,12 @@ public class Visualizator {
         JFrame frame = new JFrame(WINDOW_TITLE);
         frame.setBackground(Color.WHITE);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setMinimumSize(new Dimension(500, 300));
         frame.setLayout(new BorderLayout(0, 0));
 
         ChartPanel chartPanel = getChartPanel(generated, smoothed, predicted);
 
-        frame.add(chartPanel, BorderLayout.WEST);
+        frame.add(chartPanel, BorderLayout.CENTER);
         chartPanel.setMouseWheelEnabled(true);
         chartPanel.setHorizontalAxisTrace(true);
         chartPanel.setVerticalAxisTrace(true);
@@ -91,7 +92,7 @@ public class Visualizator {
         this.alertLabel.setFont(boldFont);
         panel.add(this.alertLabel);
 
-        frame.add(panel, BorderLayout.SOUTH);
+        frame.add(panel, BorderLayout.PAGE_END);
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
