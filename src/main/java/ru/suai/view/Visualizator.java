@@ -1,5 +1,7 @@
 package ru.suai.view;
 
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -57,9 +59,15 @@ public class Visualizator {
     private XYPlot plot;
 
     /**
+     * Logger for debug.
+     */
+    private static final Logger logger = Logger.getLogger(Visualizator.class);
+
+    /**
      * Class for visualisation the results of trend-prediction work
      */
     public Visualizator(XYSeries generated, XYSeries smoothed, XYSeries predicted) {
+        PropertyConfigurator.configure("log4j.properties");
         JFrame frame = new JFrame(WINDOW_TITLE);
         frame.setBackground(Color.WHITE);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -100,7 +108,7 @@ public class Visualizator {
         try {
             okPicture = ImageIO.read(new File("ok.png"));
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.info("Exception in reading resource (ok.png).\n" + e.getMessage());
         }
         this.okIcon = new JLabel(new ImageIcon(okPicture));
 
@@ -108,7 +116,7 @@ public class Visualizator {
         try {
             criticalPicture = ImageIO.read(new File("critical.png"));
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.info("Exception in reading resource (critical.png).\n" + e.getMessage());
         }
         this.criticalIcon = new JLabel(new ImageIcon(criticalPicture));
 
@@ -116,7 +124,7 @@ public class Visualizator {
         try {
             attentionPicture = ImageIO.read(new File("attention.png"));
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.info("Exception in reading resource (attention.png).\n" + e.getMessage());
         }
         this.attentionIcon = new JLabel(new ImageIcon(attentionPicture));
 

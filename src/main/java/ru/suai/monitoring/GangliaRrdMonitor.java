@@ -1,5 +1,7 @@
 package ru.suai.monitoring;
 
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 import org.rrd4j.core.FetchData;
 import org.rrd4j.core.FetchRequest;
 import org.rrd4j.core.RrdDb;
@@ -46,14 +48,19 @@ public class GangliaRrdMonitor {
     private RrdDb rrdDataBase;
 
     /**
+     * Logger for exceptions.
+     */
+    private static final Logger logger = Logger.getLogger(GangliaRrdMonitor.class);
+
+    /**
      * Constructor
      *
      * @param metricName name of the monitoring metric
      * @throws IOException
      */
     public GangliaRrdMonitor(String metricName) throws IOException {
+        PropertyConfigurator.configure("log4j.properties");
         this.metricName = metricName;
-
         this.rrdDataBase = new RrdDb(metricName + RRD_DATABASE_FORMAT, RRD_PATH + metricName + RRD_DATABASE_FORMAT);
     }
 
@@ -91,6 +98,7 @@ public class GangliaRrdMonitor {
             fetchData = request.fetchData();
         } catch (IOException e) {
             e.printStackTrace();
+            logger.info("Exception in fetch data from rrd. database.\n" + e.getMessage());
         }
 
         fetchValues = fetchData.getValues();

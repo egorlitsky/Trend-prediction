@@ -163,6 +163,7 @@ public class Main {
     private static String monitoringMetricName;
 
     public static void main(String[] args) throws IOException {
+        PropertyConfigurator.configure("log4j.properties");
         String settingsFileName = "settings.properties";
 
         if (args.length != 1) {
@@ -240,13 +241,15 @@ public class Main {
             copyFileName = propertyFile.getProperty("FILE_PATH_FOR_COPY");
             monitoringMetricName = propertyFile.getProperty("MONITORING_METRIC_NAME");
         } catch (IOException ex) {
-            ex.printStackTrace();
+            logger.info("Exception in reading file with program settings.\n" + ex.getMessage());
+            System.exit(1);
         } finally {
             if (input != null) {
                 try {
                     input.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.info("Exception in reading file with program settings.\n" + e.getMessage());
+                    System.exit(1);
                 }
             }
         }
@@ -263,8 +266,6 @@ public class Main {
                 currentPredictedValue,
                 generatedNumber;
         int i = 1;
-
-        PropertyConfigurator.configure("log4j.properties");
 
         DataSmoothing ds = new DataSmoothing((int)period, p);
         Predictor pr = new Predictor((int)period, (int)period, futurePredictsCount, qos);
