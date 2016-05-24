@@ -25,9 +25,9 @@ public class UserSimulator {
     private String password;
 
     /*
-     * Statement for connection to the database.
+     * Counter for fill database.
      */
-    private Statement statement;
+    private static int i;
 
     /**
      * Object of the MySQL DB connection.
@@ -69,7 +69,6 @@ public class UserSimulator {
         // create statement and connection
         try {
             this.currentConnection = DriverManager.getConnection(this.databaseUrl, this.username, this.password);
-            this.statement = this.currentConnection.createStatement();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -85,17 +84,26 @@ public class UserSimulator {
      * Performs database requests in multiple threads.
      * @param usersCount count of the threads with queries.
      * @param requestsCount count of the queries for each thread.
-     * @param request MySQL query in String.
      */
-    public void generateRequests(int usersCount, int requestsCount, String request) throws IOException {
+    public void generateRequests(int usersCount, int requestsCount) throws IOException {
         if (this.isDatabaseOperations) {
             for (int i = 0; i < usersCount; i++) {
-                Statement st = this.statement;
+                // the mysql insert statement
+                String query = "insert into test (number, number2, text)"
+                        + " values (?, ?, ?)";
 
                 Thread thread = new Thread(() -> {
                     for (int j = 0; j < requestsCount; j++) {
                         try {
-                            st.executeQuery(request);
+                            this.i++;
+                            // create the mysql insert preparedstatement
+                            PreparedStatement preparedStmt = this.currentConnection.prepareStatement(query);
+                            preparedStmt.setInt(1, requestsCount + this.i);
+                            preparedStmt.setInt(2, requestsCount + this.i + 1);
+                            preparedStmt.setString(3, "ExampleExampleExample");
+
+                            // execute the preparedstatement
+                            preparedStmt.execute();
                         } catch (SQLException e) {
                             e.printStackTrace();
                         }

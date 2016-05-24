@@ -166,7 +166,7 @@ public class Main {
         PropertyConfigurator.configure("log4j.properties");
         String settingsFileName = "settings.properties";
 
-        if (args.length != 1) {
+		if (args.length != 1) {
             throw new RuntimeException("Not enough arguments!\nRun the program with single argument Settings file name");
         } else {
             settingsFileName = args[0];
@@ -298,33 +298,32 @@ public class Main {
             userSim = new UserSimulator(originalFileName, copyFileName);
         }
 
+        ArrayList<Double> temp = new ArrayList<>();
+
         // main loop
         while (true) {
             int usersCount = (int) diurnalGenerator.getValue(i);
 
             if (dataBaseRequests) {
-                // experiment fir database
-                switch ((int) (Math.random() * 3)) {
-                    case 0:
-                        userSim.generateRequests(usersCount, requestsCount, "SELECT * FROM test");
-                        System.out.println("1");
-                        break;
-                    case 1:
-                        userSim.generateRequests(usersCount, requestsCount, "SELECT * FROM test1");
-                        System.out.println("2");
-                        break;
-                    case 2:
-                        System.out.println("3");
-                        userSim.generateRequests(usersCount, requestsCount, "SELECT * FROM test2");
-                        break;
-                }
+                userSim.generateRequests(usersCount, requestsCount);
             } else {
                 // experiment with copying file
-                userSim.generateRequests(usersCount, requestsCount, "");
+                userSim.generateRequests(usersCount, requestsCount);
             }
 
             GangliaRrdMonitor rrdGen = new GangliaRrdMonitor(monitoringMetricName);
             generatedNumber = rrdGen.getNextValue();
+
+            temp.add(generatedNumber);
+
+            int violatedCount = 0;
+            for (Double aTemp : temp) {
+                if (aTemp > qos)
+                    violatedCount++;
+            }
+
+            if (((double)violatedCount / period) >= p)
+                System.out.println("FACT:" + (i - (int)period));
 
             // logging
             logger.info("Time moment: " + i + ", I/O requests: " + usersCount + ", RRD data: " + generatedNumber);
@@ -399,7 +398,7 @@ public class Main {
         ArtificialGenerator ag = new ArtificialGenerator(a, b, randomness, shapeType);
 
         for (int j = 1; j < pointsCount; j++) {
-            generatedNumber = (double) ag.getValue(i);
+            generatedNumber = ag.getValue(i);
 
             if (generatedNumber > qos) {
                 view.setAlertState(Visualizator.QOS_VIOLATED_STATUS);
@@ -477,8 +476,20 @@ public class Main {
         Visualizator view = new Visualizator(generated, smoothed, predicted);
         view.setQosOnPlot(qos);
 
+        ArrayList<Double> temp = new ArrayList<>();
         for (int j = 1; j < pointsCount; j++) {
             generatedNumber = diurnalGenerator.getValue(i);
+
+            temp.add(generatedNumber);
+
+            int violatedCount = 0;
+            for (Double aTemp : temp) {
+                if (aTemp > qos)
+                    violatedCount++;
+            }
+
+            if (((double)violatedCount / period) >= p)
+                System.out.println("FACT:" + (i - (int)period));
 
             if (generatedNumber > qos) {
                 view.setAlertState(Visualizator.QOS_VIOLATED_STATUS);
@@ -491,6 +502,8 @@ public class Main {
             if (i % (int)period  == 0) {
                 currentSmoothValue = ds.getHybridSmoothValue();
                 pr.addValue(currentSmoothValue);
+
+                temp.clear();
             }
 
             if (i % (int)period == 0 && i > (int)period * (int)period) {

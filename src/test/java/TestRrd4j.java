@@ -11,7 +11,7 @@ import java.util.Date;
 import static junit.framework.Assert.assertEquals;
 import static org.rrd4j.ConsolFun.AVERAGE;
 
-public class TestRrdGenerator {
+public class TestRrd4j {
     public static final String TEST_VALUE_NAME = "total";
 
     public static final int ONE_SECOND = 60;
@@ -34,7 +34,7 @@ public class TestRrdGenerator {
     }
 
     @Test
-    public void testWritingToRrdDataBase() throws IOException {
+    public void testReadingFromRrdDataBase() throws IOException {
         Sample sample = rrdDb.createSample();
         sample.setTime(startTime + ONE_SECOND);
         sample.setValue(TEST_VALUE_NAME, TEST_VALUE);

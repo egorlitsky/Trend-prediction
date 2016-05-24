@@ -88,6 +88,12 @@ public class Predictor {
     private int qosViolatedTime;
 
     /**
+     * Flag is true if in current statistic QoS
+     * requirements are violated.
+     */
+    private boolean currentQoSViolatedState;
+
+    /**
      * Type of the function based on current statistic.
      */
     private String currentFunctionType;
@@ -142,6 +148,7 @@ public class Predictor {
 
         this.predictFutureTime = predictFutureTime;
         this.qos = qos;
+        this.currentQoSViolatedState = false;
         this.currentFunctionType = "";
     }
 
@@ -233,6 +240,7 @@ public class Predictor {
             this.y.pollFirst();
 
         this.convertQueueToArray();
+
         ++timeCounter;
     }
 
@@ -451,8 +459,8 @@ public class Predictor {
     public boolean isQosViolated() {
         for (int i = 0; i < this.futurePredictions.size(); ++i) {
             if (this.futurePredictions.get(i) > this.qos) {
-                this.qosViolatedTime = this.timeCounter + FIRST_PREDICT_OFFSET + i;
-
+                this.qosViolatedTime =  timeCounter * predictWindow - (predictWindow * predictWindow) + (FIRST_PREDICT_OFFSET + i) * predictWindow;
+                System.out.println("WILL:" + this.qosViolatedTime);
                 return true;
             }
         }

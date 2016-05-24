@@ -160,7 +160,7 @@ public class Visualizator {
                 data,
                 PlotOrientation.VERTICAL,
                 true,
-                true,
+                false,
                 false
         );
 
@@ -194,8 +194,6 @@ public class Visualizator {
      * @throws IOException
      */
     public void setAlertState(String currentStatus) throws IOException {
-        BufferedImage picture;
-
         switch (currentStatus) {
             case QOS_COMPLIED_STATUS:
                 this.alertLabel.setText(OK_MESSAGE);
