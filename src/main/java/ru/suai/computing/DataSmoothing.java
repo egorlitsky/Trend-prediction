@@ -36,7 +36,7 @@ public class DataSmoothing {
      * @param p given percentage of the maximum values of all window
      */
     public DataSmoothing(int w, double p) {
-        this.y = new ArrayDeque<Double>();
+        this.y = new ArrayDeque<>();
         this.w = w;
         this.p = p;
     }

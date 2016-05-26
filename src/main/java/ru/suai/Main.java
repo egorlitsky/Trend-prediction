@@ -47,6 +47,14 @@ public class Main {
      */
     private static final Logger logger = Logger.getLogger(Main.class);
 
+    /**
+     * Generate or monitor and predict mode.
+     */
+    private static String programMode;
+
+    /**
+     * Type of modeling in the program.
+     */
     private static String modelingType;
 
     /**
@@ -68,13 +76,6 @@ public class Main {
      * Proportion of max values in hybrid data smoothing.
      */
     private static double p;
-
-    /**
-     * Flag for DiurnalGenerator. (true - will be
-     * generated requests to MySQL DB, false - will be
-     * copied file on the disks).
-     */
-    private static boolean dataBaseRequests;
 
     /**
      * Amplitude value for DiurnalGenerator.
@@ -148,47 +149,60 @@ public class Main {
     private static boolean clearPlot;
 
     /**
-     * Path of original file for experiment with copying.
-     */
-    private static String originalFileName;
-
-    /**
-     * Path of copy file for experiment with copying.
-     */
-    private static String copyFileName;
-
-    /**
      * Name of disk metric for monitoring by Ganglia.
      */
     private static String monitoringMetricName;
 
+    /**
+     * Url to MySQL database for UserSimulator.
+     */
+    private static String databaseUrl;
+
+    /**
+     * Username for access to MySQL database.
+     */
+    private static String databaseUsername;
+
+    /**
+     * Password for access to MySQL database.
+     */
+    private static String databasePassword;
+
     public static void main(String[] args) throws IOException {
-        PropertyConfigurator.configure("log4j.properties");
+        PropertyConfigurator.configure(Main.class.getClassLoader().getResource("log4j.properties"));
         String settingsFileName = "settings.properties";
 
-		if (args.length != 1) {
+		if (args.length != 2) {
             throw new RuntimeException("Not enough arguments!\nRun the program with single argument Settings file name");
         } else {
             settingsFileName = args[0];
         }
 
+        programMode = args[1];
+
         loadSettings(settingsFileName);
 
-        // selecting mode of program
-        switch (modelingType) {
-            case "ARTIFICIAL":
-                testOnArtificialGenerator();
-                break;
-            case "DIURNAL":
-                testOnDiurnalGenerator();
-                break;
-            case "GANGLIA":
-                try {
-                    testOnGangliaMonitoring();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                break;
+        if (programMode.equals("-generate")) {
+            simulateTraffic();
+        }
+
+        if (programMode.equals("-monitor")) {
+            // selecting mode of program
+            switch (modelingType) {
+                case "ARTIFICIAL":
+                    testOnArtificialGenerator();
+                    break;
+                case "DIURNAL":
+                    testOnDiurnalGenerator();
+                    break;
+                case "GANGLIA":
+                    try {
+                        testOnGangliaMonitoring();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+            }
         }
     }
 
@@ -215,7 +229,6 @@ public class Main {
             qos = Double.parseDouble(propertyFile.getProperty("QOS_REQUIREMENT"));
             futurePredictsCount = Integer.parseInt(propertyFile.getProperty("FUTURE_PREDICTS_COUNT"));
             p = Double.parseDouble(propertyFile.getProperty("PROPORTION_OF_MAX"));
-            dataBaseRequests = Boolean.parseBoolean(propertyFile.getProperty("IS_DATABASE_REQUESTS"));
 
             // load generator's properties
             amplitude = Double.parseDouble(propertyFile.getProperty("SIN_AMPLITUDE"));
@@ -230,6 +243,11 @@ public class Main {
             requestsCount = Integer.parseInt(propertyFile.getProperty("REQUESTS_COUNT"));
             randomness = Integer.parseInt(propertyFile.getProperty("RANDOMNESS"));
 
+            // load database settings
+            databaseUrl = propertyFile.getProperty("DATABASE_URL");
+            databaseUsername = propertyFile.getProperty("DATABASE_USERNAME");
+            databasePassword = propertyFile.getProperty("DATABASE_PASSWORD");
+
             // load view properties
             pointsCount = Integer.parseInt(propertyFile.getProperty("POINTS_COUNT"));
             showingPointsCount = Integer.parseInt(propertyFile.getProperty("SHOWING_POINTS_COUNT"));
@@ -237,8 +255,6 @@ public class Main {
             clearPlot = Boolean.valueOf(propertyFile.getProperty("CLEAR_PLOT"));
 
             // Ganglia and UserImitator Settings
-            originalFileName = propertyFile.getProperty("ORIGINAL_FILE_PATH");
-            copyFileName = propertyFile.getProperty("FILE_PATH_FOR_COPY");
             monitoringMetricName = propertyFile.getProperty("MONITORING_METRIC_NAME");
         } catch (IOException ex) {
             logger.info("Exception in reading file with program settings.\n" + ex.getMessage());
@@ -251,6 +267,41 @@ public class Main {
                     logger.info("Exception in reading file with program settings.\n" + e.getMessage());
                     System.exit(1);
                 }
+            }
+        }
+    }
+
+    private static void simulateTraffic() throws IOException {
+        int i = 1;
+
+        HashMap<DiurnalGenerator.modulation, Double> modulation = new HashMap<>();
+        modulation.put(DiurnalGenerator.modulation.AMPLITUDE, amplitude);
+        modulation.put(DiurnalGenerator.modulation.PERIOD, period);
+        modulation.put(DiurnalGenerator.modulation.PHASE, phase);
+
+        HashMap<DiurnalGenerator.distribution, String> distribution = new HashMap<>();
+        distribution.put(DiurnalGenerator.distribution.DISTRIBUTION_TYPE, distributionType);
+        distribution.put(DiurnalGenerator.distribution.SHAPE_TYPE, shapeType);
+        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_A, String.valueOf(a));
+        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_B, String.valueOf(b));
+
+        DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, mean);
+        UserSimulator userSim = new UserSimulator(databaseUrl, databaseUsername, databasePassword);
+
+        while (true) {
+            int usersCount = (int) diurnalGenerator.getValue(i);
+
+            userSim.generateRequests(usersCount, requestsCount);
+
+            // logging
+            logger.info("Time moment: " + i + ", Generated I/O requests count: " + usersCount);
+
+            ++i;
+
+            try {
+                Thread.sleep(FETCH_PERIOD);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -270,19 +321,6 @@ public class Main {
         DataSmoothing ds = new DataSmoothing((int)period, p);
         Predictor pr = new Predictor((int)period, (int)period, futurePredictsCount, qos);
 
-        HashMap<DiurnalGenerator.modulation, Double> modulation = new HashMap<>();
-        modulation.put(DiurnalGenerator.modulation.AMPLITUDE, amplitude);
-        modulation.put(DiurnalGenerator.modulation.PERIOD, period);
-        modulation.put(DiurnalGenerator.modulation.PHASE, phase);
-
-        HashMap<DiurnalGenerator.distribution, String> distribution = new HashMap<>();
-        distribution.put(DiurnalGenerator.distribution.DISTRIBUTION_TYPE, distributionType);
-        distribution.put(DiurnalGenerator.distribution.SHAPE_TYPE, shapeType);
-        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_A, String.valueOf(a));
-        distribution.put(DiurnalGenerator.distribution.COEFFICIENT_B, String.valueOf(b));
-
-        DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, mean);
-
         // initialize the view
         final XYSeries generated = new XYSeries(GENERATED_PLOT_TITLE);
         final XYSeries smoothed = new XYSeries(SMOOTHED_PLOT_TITLE);
@@ -290,30 +328,15 @@ public class Main {
         Visualizator view = new Visualizator(generated, smoothed, predicted);
         view.setQosOnPlot(qos);
 
-        UserSimulator userSim;
-
-        if (dataBaseRequests) {
-            userSim = new UserSimulator("jdbc:mysql://localhost/test", "generator", "asdf1234");
-        } else {
-            userSim = new UserSimulator(originalFileName, copyFileName);
-        }
-
         ArrayList<Double> temp = new ArrayList<>();
 
         // main loop
         while (true) {
-            int usersCount = (int) diurnalGenerator.getValue(i);
-
-            if (dataBaseRequests) {
-                userSim.generateRequests(usersCount, requestsCount);
-            } else {
-                // experiment with copying file
-                userSim.generateRequests(usersCount, requestsCount);
-            }
-
             GangliaRrdMonitor rrdGen = new GangliaRrdMonitor(monitoringMetricName);
             generatedNumber = rrdGen.getNextValue();
 
+            // logging
+            logger.info("Time moment: " + i + ", RRD data: " + generatedNumber);
             temp.add(generatedNumber);
 
             int violatedCount = 0;
@@ -322,15 +345,10 @@ public class Main {
                     violatedCount++;
             }
 
-            if (((double)violatedCount / period) >= p)
-                System.out.println("FACT:" + (i - (int)period));
-
-            // logging
-            logger.info("Time moment: " + i + ", I/O requests: " + usersCount + ", RRD data: " + generatedNumber);
-
-            // check for QoS
-            if (generatedNumber > qos) {
+            // check for QoS requirements
+            if (((double)violatedCount / period) >= p) {
                 view.setAlertState(Visualizator.QOS_VIOLATED_STATUS);
+                System.out.println("FACT:" + (i - (int) period));
             } else {
                 view.setAlertState(Visualizator.QOS_COMPLIED_STATUS);
             }

@@ -59,7 +59,7 @@ public class GangliaRrdMonitor {
      * @throws IOException
      */
     public GangliaRrdMonitor(String metricName) throws IOException {
-        PropertyConfigurator.configure("log4j.properties");
+        PropertyConfigurator.configure(GangliaRrdMonitor.class.getClassLoader().getResource("log4j.properties"));
         this.metricName = metricName;
         this.rrdDataBase = new RrdDb(metricName + RRD_DATABASE_FORMAT, RRD_PATH + metricName + RRD_DATABASE_FORMAT);
     }

@@ -67,7 +67,7 @@ public class Visualizator {
      * Class for visualisation the results of trend-prediction work
      */
     public Visualizator(XYSeries generated, XYSeries smoothed, XYSeries predicted) {
-        PropertyConfigurator.configure("log4j.properties");
+        PropertyConfigurator.configure(Visualizator.class.getClassLoader().getResource("log4j.properties"));
         JFrame frame = new JFrame(WINDOW_TITLE);
         frame.setBackground(Color.WHITE);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -107,7 +107,7 @@ public class Visualizator {
     private void initializeIcons() {
         BufferedImage okPicture = null;
         try {
-            okPicture = ImageIO.read(new File("ok.png"));
+            okPicture = ImageIO.read(Visualizator.class.getClassLoader().getResource("ok.png"));
         } catch (IOException e) {
             logger.info("Exception in reading resource (ok.png).\n" + e.getMessage());
         }
@@ -115,7 +115,7 @@ public class Visualizator {
 
         BufferedImage criticalPicture = null;
         try {
-            criticalPicture = ImageIO.read(new File("critical.png"));
+            criticalPicture = ImageIO.read(Visualizator.class.getClassLoader().getResource("critical.png"));
         } catch (IOException e) {
             logger.info("Exception in reading resource (critical.png).\n" + e.getMessage());
         }
@@ -123,7 +123,7 @@ public class Visualizator {
 
         BufferedImage attentionPicture = null;
         try {
-            attentionPicture = ImageIO.read(new File("attention.png"));
+            attentionPicture = ImageIO.read(Visualizator.class.getClassLoader().getResource("attention.png"));
         } catch (IOException e) {
             logger.info("Exception in reading resource (attention.png).\n" + e.getMessage());
         }
