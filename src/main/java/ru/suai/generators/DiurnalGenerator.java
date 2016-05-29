@@ -131,7 +131,7 @@ public class DiurnalGenerator implements Generator {
         }
 
         if (this.generatedNumbersCount % this.period == 0) {
-            this.baseNumber = (Double)this.artificialGenerator.getValue(this.growArgument);
+            this.baseNumber = this.artificialGenerator.getValue(this.growArgument);
 
             ++this.growArgument;
         }

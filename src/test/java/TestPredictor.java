@@ -35,7 +35,7 @@ public class TestPredictor {
         this.artificialGenerator.setFunctionType(Predictor.LINEAR_FUNCTION_TYPE);
         this.predictor = new Predictor(0, 10, 0, 0);
         for (int i = 1; i <= this.testElementsCount; i++) {
-            predictor.addValue((double)this.artificialGenerator.getValue(i));
+            predictor.addValue(this.artificialGenerator.getValue(i));
         }
 
         predictor.computeLinearCoefficients();
@@ -49,7 +49,7 @@ public class TestPredictor {
         this.predictor = new Predictor(0, 10, 0, 0);
 
         for (int i = 1; i <= this.testElementsCount; i++) {
-            this.predictor.addValue((double) this.artificialGenerator.getValue(i));
+            this.predictor.addValue(this.artificialGenerator.getValue(i));
         }
 
         this.predictor.computeDegreeCoefficients();
@@ -63,7 +63,7 @@ public class TestPredictor {
         this.predictor = new Predictor(0, 10, 0, 0);
 
         for (int i = 1; i <= testElementsCount; i++) {
-            this.predictor.addValue((double) this.artificialGenerator.getValue(i));
+            this.predictor.addValue(this.artificialGenerator.getValue(i));
         }
 
         this.predictor.computeExponentialCoefficients();
@@ -77,7 +77,7 @@ public class TestPredictor {
         this.predictor = new Predictor(0, 10, 0, 0);
 
         for (int i = 1; i <= testElementsCount; i++) {
-            this.predictor.addValue((double) this.artificialGenerator.getValue(i));
+            this.predictor.addValue(this.artificialGenerator.getValue(i));
         }
 
         this.predictor.getPredict();
@@ -93,7 +93,7 @@ public class TestPredictor {
         this.predictor = new Predictor(0, 10, 0, 0);
 
         for (int i = 1; i <= testElementsCount; i++) {
-            this.predictor.addValue((double) this.artificialGenerator.getValue(i));
+            this.predictor.addValue( this.artificialGenerator.getValue(i));
         }
 
         this.predictor.getPredict();
@@ -109,7 +109,7 @@ public class TestPredictor {
         this.predictor = new Predictor(0, 10, 0, 0);
 
         for (int i = 1; i <= testElementsCount; i++) {
-            this.predictor.addValue((double) this.artificialGenerator.getValue(i));
+            this.predictor.addValue(this.artificialGenerator.getValue(i));
         }
 
         this.predictor.getPredict();
@@ -125,10 +125,10 @@ public class TestPredictor {
         this.predictor = new Predictor(0, 10, 0, 0);
 
         for (int i = 1; i <= testElementsCount; i++) {
-            this.predictor.addValue((double) this.artificialGenerator.getValue(i));
+            this.predictor.addValue(this.artificialGenerator.getValue(i));
         }
 
-        assertTrue((double) this.artificialGenerator.getValue(testElementsCount + 1) == this.predictor.getPredict());
+        assertTrue(this.artificialGenerator.getValue(testElementsCount + 1) == this.predictor.getPredict());
     }
 
     @Test
@@ -137,10 +137,10 @@ public class TestPredictor {
         this.predictor = new Predictor(0, 10, 0, 0);
 
         for (int i = 1; i <= testElementsCount; i++) {
-            this.predictor.addValue((double) this.artificialGenerator.getValue(i));
+            this.predictor.addValue(this.artificialGenerator.getValue(i));
         }
 
-        assertTrue((double) this.artificialGenerator.getValue(testElementsCount + 1) == this.predictor.getPredict());
+        assertTrue(this.artificialGenerator.getValue(testElementsCount + 1) == this.predictor.getPredict());
     }
 
     @Test
@@ -149,10 +149,10 @@ public class TestPredictor {
         this.predictor = new Predictor(0, 10, 0, 0);
 
         for (int i = 1; i <= testElementsCount; i++) {
-            this.predictor.addValue((double) this.artificialGenerator.getValue(i));
+            this.predictor.addValue(this.artificialGenerator.getValue(i));
         }
 
-        assertTrue((double) this.artificialGenerator.getValue(testElementsCount + 1) == this.predictor.getPredict());
+        assertTrue(this.artificialGenerator.getValue(testElementsCount + 1) == this.predictor.getPredict());
     }
 
     @Test

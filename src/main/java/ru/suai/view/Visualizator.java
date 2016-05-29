@@ -17,7 +17,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.util.ArrayList;
 
 /**
  * It is class for visualisation the generated, smoothed and
@@ -25,10 +24,6 @@ import java.util.ArrayList;
  */
 public class Visualizator {
     // String constants
-    public static final String CSV_FILE_FORMAT = ".csv";
-    public static final String CSV_DELIMITER = "\n";
-    public static final String ERROR_IN_SAVING_CSV_FILE = "Error in saving .CSV file";
-
     public static final String WINDOW_TITLE = "Storage IOPS trend prediction v.1.0";
     public static final String COLUMN_TITLE = "Time (hours)";
     public static final String ROW_TITLE = "Workload value (IO per minutes)";
@@ -197,7 +192,6 @@ public class Visualizator {
         switch (currentStatus) {
             case QOS_COMPLIED_STATUS:
                 this.alertLabel.setText(OK_MESSAGE);
-                this.alertLabel.setForeground(Color.GREEN);
 
                 this.attentionIcon.setVisible(false);
                 this.criticalIcon.setVisible(false);
@@ -221,31 +215,6 @@ public class Visualizator {
                 this.criticalIcon.setVisible(true);
                 this.okIcon.setVisible(false);
                 break;
-        }
-    }
-
-    /**
-     * Saves the ArrayList into .csv file.
-     *
-     * @param arrayList input ArrayList
-     * @param filename  name of the output file
-     */
-    private static void saveArrayListToCsv(ArrayList<Double> arrayList, String filename) {
-        try {
-            OutputStream f = new FileOutputStream(filename + CSV_FILE_FORMAT, false);
-
-            OutputStreamWriter writer = new OutputStreamWriter(f);
-            BufferedWriter out = new BufferedWriter(writer);
-
-            for (Double item : arrayList) {
-                out.write(String.valueOf(item) + CSV_DELIMITER);
-            }
-
-            out.flush();
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(ERROR_IN_SAVING_CSV_FILE);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 }

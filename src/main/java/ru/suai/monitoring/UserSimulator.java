@@ -2,6 +2,7 @@ package ru.suai.monitoring;
 
 import java.io.IOException;
 import java.sql.*;
+import java.util.ArrayList;
 
 /**
  * This class implements methods for generating read / write
@@ -64,33 +65,40 @@ public class UserSimulator {
      * @param requestsCount count of the queries for each thread.
      */
     public void generateRequests(int usersCount, int requestsCount) throws IOException {
-        for (int i = 0; i < usersCount; i++) {
-            // the mysql insert statement
-            String query = "insert into test (number, number2, text)"
-                    + " values (?, ?, ?)";
+        ArrayList<Thread> threads = new ArrayList<>();
 
-            Thread thread = new Thread(() -> {
+        for (int i = 0; i < usersCount; i++) {
+            threads.add(new Thread(() -> {
                 for (int j = 0; j < requestsCount; j++) {
                     try {
-                        this.i++;
-                        // create the mysql insert preparedstatement
-                        PreparedStatement preparedStmt = this.currentConnection.prepareStatement(query);
-                        preparedStmt.setInt(1, requestsCount + this.i);
-                        preparedStmt.setInt(2, requestsCount + this.i + 1);
-                        preparedStmt.setString(3, testStringForDatabase);
+                        UserSimulator.i++;
+                        String query;
+                        PreparedStatement preparedStmt;
 
+                        query = "insert into test1 (number, number2, text, text1)" + " values (?, ?, ?, ?)";
+
+                        preparedStmt = this.currentConnection.prepareStatement(query);
+                        preparedStmt.setInt(1, requestsCount + UserSimulator.i);
+                        preparedStmt.setInt(2, requestsCount + UserSimulator.i + 1);
+                        preparedStmt.setString(3, testStringForDatabase);
+                        preparedStmt.setString(4, testStringForDatabase + UserSimulator.i);
                         // execute the prepared statement
                         preparedStmt.execute();
+
                     } catch (SQLException e) {
                         e.printStackTrace();
                     }
                 }
-            });
+            }));
+        }
 
-            thread.start();
+        for (int i = 0; i < usersCount; i++) {
+            threads.get(i).start();
+        }
 
+        for (int i = 0; i < usersCount; i++) {
             try {
-                thread.join();
+                threads.get(i).join();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
