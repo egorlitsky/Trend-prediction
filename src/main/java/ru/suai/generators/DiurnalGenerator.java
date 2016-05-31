@@ -123,10 +123,7 @@ public class DiurnalGenerator implements Generator {
         // check of the distribution
         switch (this.distributionType) {
             case POISSON_DISTRIBUTION_TYPE:
-                stochasticNumber = this.getPoissonNumber();//r.nextInt((int)this.mean);//
-                System.out.println(stochasticNumber);
-                //if (this.randomGenerator.nextBoolean())
-                  //  stochasticNumber = -stochasticNumber;
+                stochasticNumber = this.getPoissonNumber();
                 break;
             case CONSTANT_DISTRIBUTION_TYPE:
                 this.artificialGenerator.setA(0);
