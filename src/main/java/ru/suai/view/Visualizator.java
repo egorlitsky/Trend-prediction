@@ -217,4 +217,8 @@ public class Visualizator {
                 break;
         }
     }
+
+    public static void showErrorMessageBox(String message) {
+        JOptionPane.showMessageDialog(new JFrame(), message, WINDOW_TITLE, JOptionPane.ERROR_MESSAGE);
+    }
 }

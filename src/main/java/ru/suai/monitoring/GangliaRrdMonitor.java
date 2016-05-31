@@ -5,6 +5,8 @@ import org.apache.log4j.PropertyConfigurator;
 import org.rrd4j.core.FetchData;
 import org.rrd4j.core.FetchRequest;
 import org.rrd4j.core.RrdDb;
+import ru.suai.view.Visualizator;
+
 import static org.rrd4j.ConsolFun.AVERAGE;
 
 import java.io.IOException;
@@ -36,6 +38,11 @@ public class GangliaRrdMonitor {
      * Time period of the collecting data by Ganglia for our metric.
      */
     public static final int COLLECT_TIME_PERIOD = 100;
+
+    /**
+     * Message for error message box.
+     */
+    public static final String RRD_FETCH_DATA_EXCEPTION = "Exception in fetch data from rrd. database.\n";
 
     /**
      * Name of the monitoring metric.
@@ -98,7 +105,8 @@ public class GangliaRrdMonitor {
             fetchData = request.fetchData();
         } catch (IOException e) {
             e.printStackTrace();
-            logger.info("Exception in fetch data from rrd. database.\n" + e.getMessage());
+            logger.info(RRD_FETCH_DATA_EXCEPTION + e.getMessage());
+            Visualizator.showErrorMessageBox(RRD_FETCH_DATA_EXCEPTION);
         }
 
         fetchValues = fetchData.getValues();

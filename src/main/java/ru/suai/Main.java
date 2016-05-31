@@ -43,6 +43,17 @@ public class Main {
     public static final String PREDICTED_PLOT_TITLE = "Trend prediction";
 
     /**
+     * Message for error message box.
+     */
+    public static final String ARGUMENTS_ERROR_MESSAGE = "Not enough arguments!\nRun the program with single argument Settings file name";
+
+    /**
+     * Message for error message box.
+     */
+    public static final String READ_FILE_EXCEPTION_MESSAGE = "Exception in reading file with program settings.\n";
+
+
+    /**
      * Logger for result check.
      */
     private static final Logger logger = Logger.getLogger(Main.class);
@@ -173,35 +184,36 @@ public class Main {
         String settingsFileName = "settings.properties";
 
 		if (args.length != 2) {
-            throw new RuntimeException("Not enough arguments!\nRun the program with single argument Settings file name");
+            Visualizator.showErrorMessageBox(ARGUMENTS_ERROR_MESSAGE);
+            System.exit(1);
         } else {
             settingsFileName = args[0];
-        }
 
-        programMode = args[1];
+            programMode = args[1];
 
-        loadSettings(settingsFileName);
+            loadSettings(settingsFileName);
 
-        if (programMode.equals("-generate")) {
-            simulateTraffic();
-        }
+            if (programMode.equals("-generate")) {
+                simulateTraffic();
+            }
 
-        if (programMode.equals("-monitor") || programMode.equals("-common")) {
-            // selecting mode of program
-            switch (modelingType) {
-                case "ARTIFICIAL":
-                    testOnArtificialGenerator();
-                    break;
-                case "DIURNAL":
-                    testOnDiurnalGenerator();
-                    break;
-                case "GANGLIA":
-                    try {
-                        testOnGangliaMonitoring();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    break;
+            if (programMode.equals("-monitor") || programMode.equals("-common")) {
+                // selecting mode of program
+                switch (modelingType) {
+                    case "ARTIFICIAL":
+                        testOnArtificialGenerator();
+                        break;
+                    case "DIURNAL":
+                        testOnDiurnalGenerator();
+                        break;
+                    case "GANGLIA":
+                        try {
+                            testOnGangliaMonitoring();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                }
             }
         }
     }
@@ -257,14 +269,16 @@ public class Main {
             // Ganglia and UserImitator Settings
             monitoringMetricName = propertyFile.getProperty("MONITORING_METRIC_NAME");
         } catch (IOException ex) {
-            logger.info("Exception in reading file with program settings.\n" + ex.getMessage());
+            logger.info(READ_FILE_EXCEPTION_MESSAGE + ex.getMessage());
+            Visualizator.showErrorMessageBox(READ_FILE_EXCEPTION_MESSAGE);
             System.exit(1);
         } finally {
             if (input != null) {
                 try {
                     input.close();
                 } catch (IOException e) {
-                    logger.info("Exception in reading file with program settings.\n" + e.getMessage());
+                    logger.info(READ_FILE_EXCEPTION_MESSAGE + e.getMessage());
+                    Visualizator.showErrorMessageBox(READ_FILE_EXCEPTION_MESSAGE);
                     System.exit(1);
                 }
             }

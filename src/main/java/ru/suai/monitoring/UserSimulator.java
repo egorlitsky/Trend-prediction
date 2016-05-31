@@ -1,5 +1,7 @@
 package ru.suai.monitoring;
 
+import ru.suai.view.Visualizator;
+
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
@@ -9,6 +11,10 @@ import java.util.ArrayList;
  * SQL-requests to database of the virtual machine.
  */
 public class UserSimulator {
+    /**
+     * Message for error message box.
+     */
+    public static final String SQL_EXCEPTION_MESSAGE = "Error with SQL connection: ";
     /**
      * URL of the MySQL DB.
      */
@@ -87,6 +93,7 @@ public class UserSimulator {
 
                     } catch (SQLException e) {
                         e.printStackTrace();
+                        Visualizator.showErrorMessageBox(SQL_EXCEPTION_MESSAGE + e.getMessage());
                     }
                 }
             }));
