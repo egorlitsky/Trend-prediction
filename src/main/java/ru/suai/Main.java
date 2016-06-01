@@ -416,7 +416,10 @@ public class Main {
             // clearing old points from plot
             if (clearPlot && i > showingPointsCount) {
                 generated.remove(0);
-                smoothed.remove(0);
+
+                if(i > (int)period) {
+                    smoothed.remove(0);
+                }
 
                 if (i % (int)period == 0 && i > (int)period * (int)period) {
                     if (predicted.getItems().size() > showingPointsCount / (int)period)
@@ -425,7 +428,11 @@ public class Main {
             }
 
             generated.add((double) i, generatedNumber);
-            smoothed.add((double) i, currentSmoothValue);
+
+            if(currentSmoothValue != 0) {
+                smoothed.add((double) i - (int)period + 1, currentSmoothValue);
+            }
+
             ++i;
 
             try {
@@ -486,7 +493,10 @@ public class Main {
 
             if (clearPlot && i > showingPointsCount) {
                 generated.remove(0);
-                smoothed.remove(0);
+
+                if(i > w) {
+                    smoothed.remove(0);
+                }
 
                 if (i % w == 0 && i > w * w) {
                     if (predicted.getItems().size() > showingPointsCount / w)
@@ -495,7 +505,11 @@ public class Main {
             }
 
             generated.add((double) i, generatedNumber);
-            smoothed.add((double) i, currentSmoothValue);
+
+            if(currentSmoothValue != 0) {
+                smoothed.add((double) i - w + 1, currentSmoothValue);
+            }
+
             ++i;
 
             try {
@@ -579,7 +593,10 @@ public class Main {
 
             if (clearPlot && i > showingPointsCount) {
                 generated.remove(0);
-                smoothed.remove(0);
+
+                if(i > (int)period) {
+                    smoothed.remove(0);
+                }
 
                 if (i % (int)period == 0 && i > (int)period * (int)period) {
                     if (predicted.getItems().size() > showingPointsCount / (int)period)
@@ -588,7 +605,11 @@ public class Main {
             }
 
             generated.add((double) i, generatedNumber);
-            smoothed.add((double) i, currentSmoothValue);
+
+            if(currentSmoothValue != 0) {
+                smoothed.add((double) i - (int)period + 1, currentSmoothValue);
+            }
+
             ++i;
 
             try {
