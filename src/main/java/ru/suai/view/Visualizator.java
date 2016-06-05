@@ -2,15 +2,16 @@ package ru.suai.view;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
-import org.jfree.chart.JFreeChart;
+import org.jfree.chart.*;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.ui.RectangleInsets;
+import org.jfree.util.ShapeUtilities;
+import ru.suai.Main;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -28,12 +29,8 @@ public class Visualizator {
     public static final String COLUMN_TITLE = "Time (hours)";
     public static final String ROW_TITLE = "Workload value (IO per minutes)";
 
-    public static final String QOS_VIOLATED_STATUS = "VIOLATED";
-    public static final String QOS_WILL_BE_VIOLATED_STATUS = "WILL_BE_VIOLATED";
-    public static final String QOS_COMPLIED_STATUS = "COMPLIED";
-
     public static final String OK_MESSAGE = "QoS requirements are complied";
-    public static final String ATTENTION_MESSAGE = "QoS requirements may be violated!";
+    public static final String ATTENTION_MESSAGE = "QoS requirements may be violated";
     public static final String CRITICAL_MESSAGE = "QoS requirements are violated!";
 
     // layout parameters
@@ -146,7 +143,7 @@ public class Visualizator {
         final XYSeriesCollection data = new XYSeriesCollection();
         data.addSeries(generated);
         data.addSeries(smoothed);
-        data.addSeries(predicted);
+        //data.addSeries(predicted);
 
         final JFreeChart lineChart = ChartFactory.createXYLineChart(
                 "Trend prediction demo",
@@ -160,9 +157,38 @@ public class Visualizator {
         );
 
         plot =  lineChart.getXYPlot();
+        plot.setDomainCrosshairPaint(Color.RED);
         plot.setDomainGridlinePaint(Color.LIGHT_GRAY);
         plot.setRangeGridlinePaint(Color.LIGHT_GRAY);
         plot.setBackgroundPaint(Color.WHITE);
+        plot.setRenderer(new XYLineAndShapeRenderer(false, true) {
+            @Override
+            public Shape getItemShape(int row, int col) {
+                if (col % (Main.period) == 0) {
+                    return ShapeUtilities.createDiamond(2.3f);
+                } else {
+                    return ShapeUtilities.createDiagonalCross(0, 0);
+                }
+            }
+        });
+
+        XYLineAndShapeRenderer r = (XYLineAndShapeRenderer) plot.getRenderer();
+
+        r.setSeriesShapesVisible(0, false);
+        r.setSeriesShapesVisible(1, true);
+        r.setSeriesShapesVisible(2, false);
+
+        r.setSeriesLinesVisible(0, true);
+        r.setSeriesLinesVisible(1, true);
+        r.setSeriesLinesVisible(2, true);
+
+        r.setSeriesStroke(2, new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND,
+                1.0f, new float[] {6.0f, 6.0f}, 0.0f));
+
+        r.setSeriesPaint(0, new Color(239, 70, 55));
+        r.setSeriesPaint(1, new Color(0, 172, 178));
+        r.setSeriesPaint(2, new Color(85, 177, 69));
+
         // chart with generated, smoothed and predicted data
         ChartPanel chartPanel = new ChartPanel(lineChart);
         chartPanel.setPreferredSize(new java.awt.Dimension(WIDTH_OF_THE_GRAPHIC, HEIGHT_OF_THE_GRAPHIC));
@@ -176,7 +202,7 @@ public class Visualizator {
      * @param qos value of QoS requirement
      */
     public void setQosOnPlot(double qos) {
-        ValueMarker vm = new ValueMarker(qos, new Color(44, 149, 241), new BasicStroke(2.0F));
+        ValueMarker vm = new ValueMarker(qos, new Color(241, 171, 0), new BasicStroke(2.0F));
         vm.setLabel("         QoS");
         vm.setLabelOffset(new RectangleInsets(10, 0, 0, 0));
         plot.addRangeMarker(vm);
@@ -185,31 +211,33 @@ public class Visualizator {
     /**
      * Updates the QoS violating status.
      *
-     * @param currentStatus status
+     * @param statusType .
+     * @param statusText .
      * @throws IOException
      */
-    public void setAlertState(String currentStatus) throws IOException {
-        switch (currentStatus) {
-            case QOS_COMPLIED_STATUS:
+    public void setAlertState(int statusType, String statusText) throws IOException {
+        switch (statusType) {
+            case 1:
                 this.alertLabel.setText(OK_MESSAGE);
+                this.alertLabel.setForeground(Color.BLACK);
 
                 this.attentionIcon.setVisible(false);
                 this.criticalIcon.setVisible(false);
                 this.okIcon.setVisible(true);
                 break;
 
-            case QOS_WILL_BE_VIOLATED_STATUS:
-                this.alertLabel.setText(ATTENTION_MESSAGE);
-                this.alertLabel.setForeground(Color.RED);
+            case 2:
+                this.alertLabel.setText(ATTENTION_MESSAGE + statusText);
+                this.alertLabel.setForeground(new Color(239, 70, 55));
 
                 this.attentionIcon.setVisible(true);
                 this.criticalIcon.setVisible(false);
                 this.okIcon.setVisible(false);
                 break;
 
-            case QOS_VIOLATED_STATUS:
+            case 3:
                 this.alertLabel.setText(CRITICAL_MESSAGE);
-                this.alertLabel.setForeground(Color.RED);
+                this.alertLabel.setForeground(new Color(239, 70, 55));
 
                 this.attentionIcon.setVisible(false);
                 this.criticalIcon.setVisible(true);
