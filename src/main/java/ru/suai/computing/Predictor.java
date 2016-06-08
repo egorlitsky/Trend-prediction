@@ -216,6 +216,14 @@ public class Predictor {
     }
 
     /**
+     * Returns ArrayList with future predictions values.
+     * @return future predictions
+     */
+    public ArrayList<Double> getFuturePredictions() {
+        return futurePredictions;
+    }
+
+    /**
      * Converts queue with elements of window
      * into array for access via indexes.
      */
@@ -434,7 +442,7 @@ public class Predictor {
     public void computeFuturePredictions() {
         this.futurePredictions = new ArrayList<>();
 
-        for (int i = SECOND_PREDICTION_OFFSET; i < this.predictFutureTime + FUTURE_PREDICT_OFFSET; i++) {
+        for (int i = FIRST_PREDICT_OFFSET; i < this.predictFutureTime + FUTURE_PREDICT_OFFSET; i++) {
             switch (this.currentFunctionType) {
                 case LINEAR_FUNCTION_TYPE:
                     this.futurePredictions.add(getLinearPrediction(i));
@@ -446,8 +454,6 @@ public class Predictor {
                     this.futurePredictions.add(getExponentialPrediction(i));
             }
         }
-
-        isQosViolated();
     }
 
     /**
@@ -461,6 +467,7 @@ public class Predictor {
             if (this.futurePredictions.get(i) > this.qos) {
                 this.qosViolatedTime =  timeCounter * predictWindow - (predictWindow * predictWindow) + (FIRST_PREDICT_OFFSET + i) * predictWindow;
                 System.out.println("WILL:" + this.qosViolatedTime);
+
                 return true;
             }
         }
