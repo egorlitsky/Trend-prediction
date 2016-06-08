@@ -51,12 +51,15 @@ public class Main {
      * Message for error message box.
      */
     public static final String READ_FILE_EXCEPTION_MESSAGE = "Exception in reading file with program settings.\n";
+    public static final int QOS_COMPLIED_INDICATOR = 1;
 
 
     /**
      * Logger for result check.
      */
     private static final Logger logger = Logger.getLogger(Main.class);
+    public static final int ATTENTION_STATUS_INDICATOR = 2;
+    public static final int QOS_VIOLATED_INDICATOR = 3;
 
     /**
      * Generate or monitor and predict mode.
@@ -96,7 +99,7 @@ public class Main {
     /**
      * Period value for DiurnalGenerator.
      */
-    private static double period;
+    public static double period;
 
     /**
      * Phase value for DiurnalGenerator.
@@ -328,9 +331,8 @@ public class Main {
      */
     private static void testOnGangliaMonitoring() throws IOException {
         double currentSmoothValue = 0,
-                currentPredictedValue,
                 generatedNumber;
-        int i = 1;
+        int i = 1, k, lastPredictionIndex = 0;
 
         DataSmoothing ds = new DataSmoothing((int)period, p);
         Predictor pr = new Predictor((int)period, (int)period, futurePredictsCount, qos);
@@ -364,6 +366,8 @@ public class Main {
             userSim = new UserSimulator(databaseUrl, databaseUsername, databasePassword);
         }
 
+        boolean critical = false;
+
         // main loop
         while (true) {
             if (programMode.equals("-common") && diurnalGenerator != null) {
@@ -388,12 +392,12 @@ public class Main {
                     violatedCount++;
             }
 
-            // check for QoS requirements
             if (((double)violatedCount / period) >= p) {
-                view.setAlertState(Visualizator.QOS_VIOLATED_STATUS);
-                System.out.println("FACT:" + (i - (int) period));
+                view.setAlertState(QOS_VIOLATED_INDICATOR, "");
+                System.out.println("FACT:" + (i - (int)period));
             } else {
-                view.setAlertState(Visualizator.QOS_COMPLIED_STATUS);
+                if (!critical)
+                    view.setAlertState(QOS_COMPLIED_INDICATOR, "");
             }
 
             ds.addValue(generatedNumber);
@@ -401,15 +405,35 @@ public class Main {
             if (i % (int)period == 0) {
                 currentSmoothValue = ds.getHybridSmoothValue();
                 pr.addValue(currentSmoothValue);
+
+                temp.clear();
             }
 
             if (i % (int)period == 0 && i > (int)period * (int)period) {
-                currentPredictedValue = pr.getPredict();
-                predicted.add((double) (i + (int)period / 2), currentPredictedValue);
+                pr.getPredict();
                 pr.computeFuturePredictions();
+                ArrayList<Double> predictions = pr.getFuturePredictions();
 
-                if (generatedNumber < qos && pr.isQosViolated()) {
-                    view.setAlertState(Visualizator.QOS_WILL_BE_VIOLATED_STATUS);
+                k = 1;
+                if (lastPredictionIndex > 1) {
+                    for (int l = 1; l <= futurePredictsCount; l++) {
+                        predicted.remove(lastPredictionIndex - l);
+                    }
+
+                    for (int l = 1; l <= futurePredictsCount; l++) {
+                        lastPredictionIndex--;
+                    }
+                }
+
+                for (Object prediction : predictions) {
+                    predicted.add((double) (i + k * ((int) period / 2) + 1), (Double) prediction);
+                    lastPredictionIndex++;
+                    ++k;
+                }
+
+                if (pr.isQosViolated() && !critical) {
+                    view.setAlertState(ATTENTION_STATUS_INDICATOR, " at " + pr.getQosViolatedTime() + "hour!");
+                    critical = true;
                 }
             }
 
@@ -422,8 +446,11 @@ public class Main {
                 }
 
                 if (i % (int)period == 0 && i > (int)period * (int)period) {
-                    if (predicted.getItems().size() > showingPointsCount / (int)period)
+                    if (predicted.getItems().size() > showingPointsCount / (int)period + futurePredictsCount) {
+                        lastPredictionIndex--;
+
                         predicted.remove(0);
+                    }
                 }
             }
 
@@ -448,13 +475,13 @@ public class Main {
      * Visualization shows plot with generated, smoothed and predicted data.
      */
     public static void testOnArtificialGenerator() throws IOException {
-        int i = 1;
+        int i = 1, k, lastPredictionIndex = 0;
         double currentSmoothValue = 0,
-                currentPredictedValue,
                 generatedNumber;
 
         DataSmoothing ds = new DataSmoothing(w, p);
         Predictor pr = new Predictor(w, w, futurePredictsCount, qos);
+        ArrayList<Double> temp = new ArrayList<>();
 
         final XYSeries generated = new XYSeries(GENERATED_PLOT_TITLE);
         final XYSeries smoothed = new XYSeries(SMOOTHED_PLOT_TITLE);
@@ -465,13 +492,25 @@ public class Main {
 
         ArtificialGenerator ag = new ArtificialGenerator(a, b, randomness, shapeType);
 
+        boolean critical = false;
+
         for (int j = 1; j < pointsCount; j++) {
             generatedNumber = ag.getValue(i);
 
-            if (generatedNumber > qos) {
-                view.setAlertState(Visualizator.QOS_VIOLATED_STATUS);
+            temp.add(generatedNumber);
+
+            int violatedCount = 0;
+            for (Double aTemp : temp) {
+                if (aTemp > qos)
+                    violatedCount++;
+            }
+
+            if (((double)violatedCount / w) >= p) {
+                view.setAlertState(QOS_VIOLATED_INDICATOR, "");
+                System.out.println("FACT:" + (i - (int)w));
             } else {
-                view.setAlertState(Visualizator.QOS_COMPLIED_STATUS);
+                if (!critical)
+                    view.setAlertState(QOS_COMPLIED_INDICATOR, "");
             }
 
             ds.addValue(generatedNumber);
@@ -479,15 +518,35 @@ public class Main {
             if (i % w  == 0) {
                 currentSmoothValue = ds.getHybridSmoothValue();
                 pr.addValue(currentSmoothValue);
+
+                temp.clear();
             }
 
             if (i % w == 0 && i > w * w) {
-                currentPredictedValue = pr.getPredict();
-                predicted.add((double) (i + w / 2), currentPredictedValue);
+                pr.getPredict();
                 pr.computeFuturePredictions();
+                ArrayList<Double> predictions = pr.getFuturePredictions();
 
-                if (generatedNumber < qos && pr.isQosViolated()) {
-                    view.setAlertState(Visualizator.QOS_WILL_BE_VIOLATED_STATUS);
+                k = 1;
+                if (lastPredictionIndex > 1) {
+                    for (int l = 1; l <= futurePredictsCount; l++) {
+                        predicted.remove(lastPredictionIndex - l);
+                    }
+
+                    for (int l = 1; l <= futurePredictsCount; l++) {
+                        lastPredictionIndex--;
+                    }
+                }
+
+                for (Object prediction : predictions) {
+                    predicted.add((double) (i + k * (w / 2) + 1), (Double) prediction);
+                    lastPredictionIndex++;
+                    ++k;
+                }
+
+                if (pr.isQosViolated() && !critical) {
+                    view.setAlertState(ATTENTION_STATUS_INDICATOR, " at " + pr.getQosViolatedTime() + "hour!");
+                    critical = true;
                 }
             }
 
@@ -525,9 +584,8 @@ public class Main {
      * diurnal function and shows the results on the plot.
      */
     private static void testOnDiurnalGenerator() throws IOException {
-        int i = 1;
+        int i = 1, k, lastPredictionIndex = 0;
         double currentSmoothValue = 0,
-                currentPredictedValue,
                 generatedNumber;
 
         HashMap<DiurnalGenerator.modulation, Double> modulation = new HashMap<>();
@@ -545,13 +603,15 @@ public class Main {
         Predictor pr = new Predictor((int)period, (int)period, futurePredictsCount, qos);
         DiurnalGenerator diurnalGenerator = new DiurnalGenerator(modulation, distribution, mean);
 
+        ArrayList<Double> temp = new ArrayList<>();
         final XYSeries generated = new XYSeries(GENERATED_PLOT_TITLE);
         final XYSeries smoothed = new XYSeries(SMOOTHED_PLOT_TITLE);
         final XYSeries predicted = new XYSeries(PREDICTED_PLOT_TITLE);
         Visualizator view = new Visualizator(generated, smoothed, predicted);
         view.setQosOnPlot(qos);
 
-        ArrayList<Double> temp = new ArrayList<>();
+        boolean critical = false;
+
         for (int j = 1; j < pointsCount; j++) {
             generatedNumber = diurnalGenerator.getValue(i);
 
@@ -563,13 +623,12 @@ public class Main {
                     violatedCount++;
             }
 
-            if (((double)violatedCount / period) >= p)
+            if (((double)violatedCount / period) >= p) {
+                view.setAlertState(QOS_VIOLATED_INDICATOR, "");
                 System.out.println("FACT:" + (i - (int)period));
-
-            if (generatedNumber > qos) {
-                view.setAlertState(Visualizator.QOS_VIOLATED_STATUS);
             } else {
-                view.setAlertState(Visualizator.QOS_COMPLIED_STATUS);
+                if (!critical)
+                    view.setAlertState(QOS_COMPLIED_INDICATOR, "");
             }
 
             ds.addValue(generatedNumber);
@@ -582,12 +641,30 @@ public class Main {
             }
 
             if (i % (int)period == 0 && i > (int)period * (int)period) {
-                currentPredictedValue = pr.getPredict();
-                predicted.add((double) (i + (int)period / 2), currentPredictedValue);
+                pr.getPredict();
                 pr.computeFuturePredictions();
+                ArrayList<Double> predictions = pr.getFuturePredictions();
 
-                if (generatedNumber < qos && pr.isQosViolated()) {
-                    view.setAlertState(Visualizator.QOS_WILL_BE_VIOLATED_STATUS);
+                k = 1;
+                if (lastPredictionIndex > 1) {
+                    for (int l = 1; l <= futurePredictsCount; l++) {
+                        predicted.remove(lastPredictionIndex - l);
+                    }
+
+                    for (int l = 1; l <= futurePredictsCount; l++) {
+                        lastPredictionIndex--;
+                    }
+                }
+
+                for (Object prediction : predictions) {
+                    predicted.add((double) (i + k * ((int) period / 2) + 1), (Double) prediction);
+                    lastPredictionIndex++;
+                    ++k;
+                }
+
+                if (pr.isQosViolated() && !critical) {
+                    view.setAlertState(ATTENTION_STATUS_INDICATOR, " at " + pr.getQosViolatedTime() + "hour!");
+                    critical = true;
                 }
             }
 
@@ -599,8 +676,11 @@ public class Main {
                 }
 
                 if (i % (int)period == 0 && i > (int)period * (int)period) {
-                    if (predicted.getItems().size() > showingPointsCount / (int)period)
+                    if (predicted.getItems().size() > showingPointsCount / (int)period + futurePredictsCount) {
+                        lastPredictionIndex--;
+
                         predicted.remove(0);
+                    }
                 }
             }
 
