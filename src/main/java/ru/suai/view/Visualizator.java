@@ -143,7 +143,7 @@ public class Visualizator {
         final XYSeriesCollection data = new XYSeriesCollection();
         data.addSeries(generated);
         data.addSeries(smoothed);
-        //data.addSeries(predicted);
+        data.addSeries(predicted);
 
         final JFreeChart lineChart = ChartFactory.createXYLineChart(
                 "Trend prediction demo",

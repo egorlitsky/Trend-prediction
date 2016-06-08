@@ -51,16 +51,21 @@ public class Main {
      * Message for error message box.
      */
     public static final String READ_FILE_EXCEPTION_MESSAGE = "Exception in reading file with program settings.\n";
-    public static final int QOS_COMPLIED_INDICATOR = 1;
-
 
     /**
      * Logger for result check.
      */
     private static final Logger logger = Logger.getLogger(Main.class);
+	
+	/**
+     * Indicators of QoS statuses for view.
+     */
     public static final int ATTENTION_STATUS_INDICATOR = 2;
+	
     public static final int QOS_VIOLATED_INDICATOR = 3;
 
+	public static final int QOS_COMPLIED_INDICATOR = 1;
+	
     /**
      * Generate or monitor and predict mode.
      */
