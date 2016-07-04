@@ -40,5 +40,5 @@ You can use classes DataSmoothing and Predictor to average your metric values an
 
 ## Authors
 
-This project was desideveloped and designed by Egorlitsky V. and Linsky E. 
+This project was developed and designed by Egorlitsky V. and Linsky E. 
 Information Security Department, St. Petersburg State University of Aerospace Instrumentation (SPb SUAI).
